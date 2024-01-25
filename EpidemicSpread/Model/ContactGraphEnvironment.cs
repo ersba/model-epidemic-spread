@@ -35,6 +35,7 @@ namespace EpidemicSpread.Model
             _sfSusceptibility = tf.constant(new float[] {0.35f, 0.69f, 1.03f, 1.03f, 1.03f, 1.03f, 1.27f, 1.52f});
             _sfInfector = tf.constant(new float[] {0.0f, 0.33f, 0.72f, 0.0f, 0.0f});
             _edgeAttributes = tf.tile(tf.constant(1f), tf.constant(new int[] { (int)_edges.shape[1] }));
+            
         }
         
         private void InitEdgesWithCsv(int limit)
