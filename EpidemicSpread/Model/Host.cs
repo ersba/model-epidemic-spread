@@ -40,6 +40,7 @@ namespace EpidemicSpread.Model
 
         public void Tick()
         {
+            
         }
 
         private void Interact()

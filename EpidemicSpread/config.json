@@ -3,7 +3,7 @@
 		"deltaT": 1,
 		"steps": 2,
 		"pythonVisualization": true,
-		"console": true,
+		"console": false,
 		"output": "csv"
 	},
 	"layers":[
@@ -16,7 +16,7 @@
 				},
 				{
 					"parameter": "AgentCount",
-					"value": 150
+					"value": 30
 				}
 			]
 		}
@@ -24,7 +24,7 @@
 	"agents":[
 		{
 			"name": "Host",
-			"count": 150,
+			"count": 30,
 			"file": "Resources/hosts_data.csv"
 		}
 	]
