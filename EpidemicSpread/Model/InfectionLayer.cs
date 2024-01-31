@@ -47,15 +47,11 @@ namespace EpidemicSpread.Model
 
         private LearnableParams _learnableParams;
 
+        private Tensor _infectedIndex;
+
         private const int ChildUpperIndex = 1;
 
         private const int AdultUpperIndex = 6;
-        
-        private const float Susceptible = 0f;
-        private const float Exposed = 1f; 
-        private const float Infected = 2f;
-        private const float Recovered = 3f;
-        private const float Mortality = 4f;
 
         private ResourceVariable _infectedTime;
 
@@ -63,7 +59,7 @@ namespace EpidemicSpread.Model
         
         
 
-        private static readonly float[] Mu = { 2, 4, 3 };
+        private static readonly int[] Mu = { 2, 4, 3 };
         
         
 
@@ -71,17 +67,15 @@ namespace EpidemicSpread.Model
             UnregisterAgent unregisterAgentHandle)
         {
             var initiated = base.InitLayer(layerInitData, registerAgentHandle, unregisterAgentHandle);
-            ContactEnvironment = new ContactGraphEnvironment(AgentCount);
-            AgeGroups = tf.Variable(tf.zeros(new Shape(AgentCount, 1), TF_DataType.DtInt32Ref));
+            ContactEnvironment = new ContactGraphEnvironment(AgentCount, this);
+            AgeGroups = tf.Variable(tf.zeros(new Shape(AgentCount, 1), TF_DataType.TF_INT32));
             AgentManager = layerInitData.Container.Resolve<IAgentManager>();
             AgentManager.Spawn<Host, InfectionLayer>().ToList();
             _learnableParams = LearnableParams.Instance;
             InitStages();
             InitMeanInteractions();
             InitTimeVariables();
-            SetLamdaGammaIntegrals(5.5,2.14);
-            
-            
+            _infectedIndex = tf.greater(Stages, tf.constant(0));
             return initiated;
         }
 
@@ -92,25 +86,34 @@ namespace EpidemicSpread.Model
 
         public void PreTick()
         { 
-            
+            var nodeFeatures =
+                tf.concat(
+                    new[] { AgeGroups, tf.expand_dims(tf.stop_gradient(Stages), axis: 1), tf.expand_dims(tf.cast(_infectedIndex, TF_DataType.TF_INT32), axis: 1), _infectedTime, MeanInteractions },
+                    axis: 1);
+            var exposedToday = ContactEnvironment.Forward(nodeFeatures);
         }
 
         public void PostTick()
         {
             
         }
+
+        public int GetTick()
+        {
+            return (int) Context.CurrentTick;
+        }
         
         private void InitStages()
         {
             var probabilityInfected = _learnableParams.InitialInfectionRate / tf.constant(100) * tf.ones(new Shape(AgentCount, 1));
             var p = tf.Variable(tf.concat(new [] { probabilityInfected, 1 - probabilityInfected }, axis: 1));
-            Stages = tf.Variable(GumbelSoftmax.Execute(p)[Slice.All,0], dtype: TF_DataType.TF_FLOAT);
+            Stages = tf.Variable(GumbelSoftmax.Execute(p)[Slice.All,0], dtype: TF_DataType.TF_INT32);
             // tf.print(Stages[0]);
         }
 
         private void InitMeanInteractions()
         {
-            MeanInteractions = tf.Variable(tf.zeros(new Shape(AgentCount, 1)));
+            MeanInteractions = tf.Variable(tf.zeros(new Shape(AgentCount, 1)), dtype: TF_DataType.TF_INT32);
             var childAgents = tf.less_equal(AgeGroups, ChildUpperIndex);
             var adultAgents = tf.logical_and(tf.greater(AgeGroups, ChildUpperIndex), tf.less_equal(AgeGroups, AdultUpperIndex));
             var elderlyAgents = tf.greater(AgeGroups, AdultUpperIndex);
@@ -127,32 +130,16 @@ namespace EpidemicSpread.Model
         
         private void InitTimeVariables()
         {
-            _infectedTime = tf.Variable((Steps + 1) * tf.ones(new Shape(AgentCount, 1)));
-            _nextStageTimes = tf.Variable((Steps + 1) * tf.ones(new Shape(AgentCount, 1)));
+            _infectedTime = tf.Variable((Steps + 1) * tf.ones(new Shape(AgentCount, 1), dtype: TF_DataType.TF_INT32));
+            _nextStageTimes = tf.Variable((Steps + 1) * tf.ones(new Shape(AgentCount, 1), dtype: TF_DataType.TF_INT32));
+            var exposedCondition = tf.equal(Stages, tf.Variable((int)Stage.Exposed, dtype: TF_DataType.TF_INT32));
+            var infectedCondition = tf.equal(Stages, tf.Variable((int)Stage.Infected, dtype: TF_DataType.TF_INT32));
             
-            var exposedCondition = tf.equal(Stages, tf.Variable(Exposed, dtype: TF_DataType.TF_FLOAT));
-            var infectedCondition = tf.equal(Stages, tf.Variable(Infected, dtype: TF_DataType.TF_FLOAT));
+            _infectedTime = tf.Variable(tf.where(exposedCondition, tf.fill(tf.shape(_infectedTime), tf.Variable(0, dtype:TF_DataType.TF_INT32)), _infectedTime));
+            _infectedTime = tf.Variable(tf.where(infectedCondition, tf.fill(tf.shape(_infectedTime), (tf.Variable(-1, dtype:TF_DataType.TF_INT32) * _learnableParams.ExposedToInfectedTime) + tf.Variable(1, dtype:TF_DataType.TF_INT32)), _infectedTime));
             
-            _infectedTime = tf.Variable(tf.where(exposedCondition, tf.fill(tf.shape(_infectedTime), tf.Variable(0, dtype:TF_DataType.TF_FLOAT)), _infectedTime));
-            _infectedTime = tf.Variable(tf.where(infectedCondition, tf.fill(tf.shape(_infectedTime), (tf.Variable(-1, dtype:TF_DataType.TF_FLOAT) * _learnableParams.ExposedToInfectedTime) + tf.Variable(1, dtype:TF_DataType.TF_FLOAT)), _infectedTime));
-            
-            _nextStageTimes = tf.Variable(tf.where(exposedCondition, tf.fill(tf.shape(_nextStageTimes), (_learnableParams.ExposedToInfectedTime) + tf.Variable(1, dtype:TF_DataType.TF_FLOAT)), _nextStageTimes));
-            _nextStageTimes = tf.Variable(tf.where(infectedCondition, tf.fill(tf.shape(_nextStageTimes), (_learnableParams.InfectedToRecoveredTime) + tf.Variable(1, dtype:TF_DataType.TF_FLOAT)), _nextStageTimes));
-        }
-
-        private void SetLamdaGammaIntegrals(double scale, double rate)
-        {
-            double b = rate * rate / scale;
-            double a = scale / b;
-            var res = new List<float>();
-
-            for (int t = 1; t <= Steps + 10; t++)
-            {
-                double cdfAtTimeT = Gamma.CDF(a, b, t);
-                double cdfAtTimeTMinusOne = Gamma.CDF(a, b, t - 1);
-                res.Add((float)(cdfAtTimeT - cdfAtTimeTMinusOne));
-            }
-            ContactEnvironment.LamdaGammaIntegrals = tf.constant(res.ToArray(), TF_DataType.TF_FLOAT);
+            _nextStageTimes = tf.Variable(tf.where(exposedCondition, tf.fill(tf.shape(_nextStageTimes), (_learnableParams.ExposedToInfectedTime) + tf.Variable(1, dtype:TF_DataType.TF_INT32)), _nextStageTimes));
+            _nextStageTimes = tf.Variable(tf.where(infectedCondition, tf.fill(tf.shape(_nextStageTimes), (_learnableParams.InfectedToRecoveredTime) + tf.Variable(1, dtype:TF_DataType.TF_INT32)), _nextStageTimes));
         }
     }
 }
