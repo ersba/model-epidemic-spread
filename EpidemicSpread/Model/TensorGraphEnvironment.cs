@@ -14,7 +14,6 @@ public abstract class TensorGraphEnvironment
         var weightedMessages = expandedMessages * oneHotIndices;
         
         var aggregatedMessages = tf.reduce_sum(weightedMessages, axis: 0);
-
         return aggregatedMessages;
     }
 
@@ -26,12 +25,15 @@ public abstract class TensorGraphEnvironment
         var sourceFeature = tf.gather(nodeFeatures, sourceNode);
         var targetFeature = tf.gather(nodeFeatures, targetNode);
 
-        var edgeMessages = Message(sourceFeature, targetFeature, args);
+        var edgeMessages = Message(sourceFeature, targetFeature);
         outFeatures = Aggregate(edgeMessages, targetNode, (int)nodeFeatures.shape[0]);
+        // tf.print(tf.shape(nodeFeatures));
+        // tf.print(tf.shape(outFeatures));
+        // tf.print(outFeatures);
         return outFeatures;
         
         
     }
 
-    protected abstract Tensor Message(Tensor sourceNode, Tensor targetNode, params object[] args);
+    protected abstract Tensor Message(Tensor sourceNode, Tensor targetNode);
 }

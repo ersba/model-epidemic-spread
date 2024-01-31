@@ -52,12 +52,6 @@ namespace EpidemicSpread.Model
         private const int ChildUpperIndex = 1;
 
         private const int AdultUpperIndex = 6;
-        
-        private const int Susceptible = 0;
-        private const int Exposed = 1; 
-        private const int Infected = 2;
-        private const int Recovered = 3;
-        private const int Mortality = 4;
 
         private ResourceVariable _infectedTime;
 
@@ -73,7 +67,7 @@ namespace EpidemicSpread.Model
             UnregisterAgent unregisterAgentHandle)
         {
             var initiated = base.InitLayer(layerInitData, registerAgentHandle, unregisterAgentHandle);
-            ContactEnvironment = new ContactGraphEnvironment(AgentCount, Steps);
+            ContactEnvironment = new ContactGraphEnvironment(AgentCount, this);
             AgeGroups = tf.Variable(tf.zeros(new Shape(AgentCount, 1), TF_DataType.TF_INT32));
             AgentManager = layerInitData.Container.Resolve<IAgentManager>();
             AgentManager.Spawn<Host, InfectionLayer>().ToList();
@@ -87,22 +81,26 @@ namespace EpidemicSpread.Model
 
         public void Tick()
         {
-            var nodeFeatures =
-                tf.concat(
-            new[] { AgeGroups, tf.expand_dims(tf.stop_gradient(Stages), axis: 1), tf.expand_dims(tf.cast(_infectedIndex, TF_DataType.TF_INT32), axis: 1), _infectedTime, MeanInteractions },
-                    axis: 1);
-            // tf.print(tf.shape(nodeFeatures));
-            ContactEnvironment.Forward(nodeFeatures, (int)Context.CurrentTick);
+            
         }
 
         public void PreTick()
         { 
-            
+            var nodeFeatures =
+                tf.concat(
+                    new[] { AgeGroups, tf.expand_dims(tf.stop_gradient(Stages), axis: 1), tf.expand_dims(tf.cast(_infectedIndex, TF_DataType.TF_INT32), axis: 1), _infectedTime, MeanInteractions },
+                    axis: 1);
+            var exposedToday = ContactEnvironment.Forward(nodeFeatures);
         }
 
         public void PostTick()
         {
             
+        }
+
+        public int GetTick()
+        {
+            return (int) Context.CurrentTick;
         }
         
         private void InitStages()
@@ -134,9 +132,8 @@ namespace EpidemicSpread.Model
         {
             _infectedTime = tf.Variable((Steps + 1) * tf.ones(new Shape(AgentCount, 1), dtype: TF_DataType.TF_INT32));
             _nextStageTimes = tf.Variable((Steps + 1) * tf.ones(new Shape(AgentCount, 1), dtype: TF_DataType.TF_INT32));
-            
-            var exposedCondition = tf.equal(Stages, tf.Variable(Exposed, dtype: TF_DataType.TF_INT32));
-            var infectedCondition = tf.equal(Stages, tf.Variable(Infected, dtype: TF_DataType.TF_INT32));
+            var exposedCondition = tf.equal(Stages, tf.Variable((int)Stage.Exposed, dtype: TF_DataType.TF_INT32));
+            var infectedCondition = tf.equal(Stages, tf.Variable((int)Stage.Infected, dtype: TF_DataType.TF_INT32));
             
             _infectedTime = tf.Variable(tf.where(exposedCondition, tf.fill(tf.shape(_infectedTime), tf.Variable(0, dtype:TF_DataType.TF_INT32)), _infectedTime));
             _infectedTime = tf.Variable(tf.where(infectedCondition, tf.fill(tf.shape(_infectedTime), (tf.Variable(-1, dtype:TF_DataType.TF_INT32) * _learnableParams.ExposedToInfectedTime) + tf.Variable(1, dtype:TF_DataType.TF_INT32)), _infectedTime));
