@@ -25,7 +25,7 @@ public abstract class TensorGraphEnvironment
         var sourceFeature = tf.gather(nodeFeatures, sourceNode);
         var targetFeature = tf.gather(nodeFeatures, targetNode);
 
-        var edgeMessages = Message(sourceFeature, targetFeature);
+        var edgeMessages = Message(sourceFeature, targetFeature, (int) args[0]);
         outFeatures = Aggregate(edgeMessages, targetNode, (int)nodeFeatures.shape[0]);
         // tf.print(tf.shape(nodeFeatures));
         // tf.print(tf.shape(outFeatures));
@@ -35,5 +35,5 @@ public abstract class TensorGraphEnvironment
         
     }
 
-    protected abstract Tensor Message(Tensor sourceNode, Tensor targetNode);
+    protected abstract Tensor Message(Tensor sourceNode, Tensor targetNode, int currentTick);
 }

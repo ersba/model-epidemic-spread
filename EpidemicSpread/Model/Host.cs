@@ -33,32 +33,34 @@ namespace EpidemicSpread.Model
 
         public void Init(InfectionLayer layer)
         {
-            _infectionlayer = layer;
-            _infectionlayer.AgeGroups[Index].assign(tf.constant(MyAgeGroup)); 
+            _infectionLayer = layer;
+            _infectionLayer.AgeGroups[Index].assign(tf.constant(MyAgeGroup)); 
         }
 
         public void Tick()
         {
             Interact();
+            if (MyStage != (int)Stage.Recovered) Progress();
             if (MyStage == (int)Stage.Mortality) Die();
         }
 
         private void Interact()
         {
-            if (_infectionlayer.ContactEnvironment.Interact(Index)) MyStage = (int)Stage.Exposed;
+            if (_infectionLayer.ContactEnvironment.Interact(Index)) MyStage = (int)Stage.Exposed;
         }
 
         private void Die()
         {
-            UnregisterHandle.Invoke(_infectionlayer, this);
+            UnregisterHandle.Invoke(_infectionLayer, this);
         }
 
         private void Progress()
         {
-            
+            MyStage = _infectionLayer.Stages[Index].numpy();
+            // if (MyStage == (int)Stage.Recovered) Console.WriteLine("I'm recovered!!!");
         }
 
-        private InfectionLayer _infectionlayer;
+        private InfectionLayer _infectionLayer;
 
         public Guid ID { get; set; }
     }

@@ -17,9 +17,9 @@ namespace EpidemicSpread
         
         private LearnableParams()
         {
-            InitialInfectionRate = tf.Variable(50, dtype: TF_DataType.TF_FLOAT);
+            InitialInfectionRate = tf.Variable(5, dtype: TF_DataType.TF_FLOAT);
             R0Value = tf.Variable(5.18, dtype: TF_DataType.TF_FLOAT);
-            MortalityRate = tf.Variable(0.01, dtype: TF_DataType.TF_FLOAT);
+            MortalityRate = tf.Variable(0.1, dtype: TF_DataType.TF_FLOAT);
             ExposedToInfectedTime = tf.Variable(3, dtype: TF_DataType.TF_INT32);
             InfectedToRecoveredTime = tf.Variable(5, dtype: TF_DataType.TF_INT32);
         }

@@ -1,7 +1,7 @@
 {
 	"globals":{
 		"deltaT": 1,
-		"steps": 2,
+		"steps": 7,
 		"pythonVisualization": true,
 		"console": false,
 		"output": "csv"
@@ -12,7 +12,7 @@
 			"mapping": [
 				{
 					"parameter": "Steps",
-					"value": 2
+					"value": 7
 				},
 				{
 					"parameter": "AgentCount",
