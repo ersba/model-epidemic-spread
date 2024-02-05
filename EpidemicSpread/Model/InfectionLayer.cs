@@ -43,6 +43,8 @@ namespace EpidemicSpread.Model
         
         public ResourceVariable Stages { get; private set; }
         
+        public int[] ArrayStages { get; private set; }
+        
         private ResourceVariable MeanInteractions { get; set; }
         
         public IAgentManager AgentManager { get; private set; }
@@ -50,20 +52,19 @@ namespace EpidemicSpread.Model
         private LearnableParams _learnableParams;
 
         private Tensor _infectedIndex;
-
-        private const int ChildUpperIndex = 1;
-
-        private const int AdultUpperIndex = 6;
-
+        
         private int _infinityTime;
 
         private ResourceVariable _infectedTime;
 
         private ResourceVariable _nextStageTimes;
-        
-        private static readonly int[] Mu = { 2, 4, 3 };
-        
-        
+
+        private const int ChildUpperIndex = 1;
+
+        private const int AdultUpperIndex = 6;
+
+        private readonly int[] _mu = { 2, 4, 3 };
+
 
         public override bool InitLayer(LayerInitData layerInitData, RegisterAgent registerAgentHandle,
             UnregisterAgent unregisterAgentHandle)
@@ -86,24 +87,22 @@ namespace EpidemicSpread.Model
 
         public void Tick()
         {
-            
-        }
-
-        public void PreTick()
-        { 
             var nodeFeatures =
                 tf.concat(
                     new[] { AgeGroups, tf.stop_gradient(Stages), tf.cast(_infectedIndex, TF_DataType.TF_INT32), _infectedTime, MeanInteractions },
                     axis: 1);
             var exposedToday = ContactEnvironment.Forward(nodeFeatures, (int)Context.CurrentTick);
             var nextStages = updateStages(exposedToday);
-            _nextStageTimes = tf.Variable(updateNextStageTimes(exposedToday));
+            _nextStageTimes = tf.Variable(UpdateNextStageTimes(exposedToday));
             Stages = tf.Variable(nextStages);
-            // Console.WriteLine("-----------");
             _infectedIndex = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedIndex), tf.constant(true)), _infectedIndex);
             _infectedTime = tf.Variable(tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedTime), tf.constant((int)Context.CurrentTick)), _infectedTime));
-            // tf.print(_infectedTime);
-            // tf.print(Stages);
+            ArrayStages = Stages.numpy().ToArray<int>();
+        }
+
+        public void PreTick()
+        { 
+            
         }
 
         public void PostTick()
@@ -111,16 +110,19 @@ namespace EpidemicSpread.Model
             
         }
 
-        private Tensor updateNextStageTimes(Tensor exposedToday)
+        private Tensor UpdateNextStageTimes(Tensor exposedToday)
         {
             var newTransitionTimes = tf.identity(_nextStageTimes);
             var currentStages = tf.identity(Stages);
             var conditionInfectedAndTransitionTime = tf.logical_and(tf.equal(currentStages, tf.constant((int)Stage.Infected)), 
                 tf.equal(_nextStageTimes, tf.constant((int)Context.CurrentTick)));
+            
             newTransitionTimes = tf.where(conditionInfectedAndTransitionTime, 
                 tf.fill(tf.shape(newTransitionTimes), tf.constant(_infinityTime)), newTransitionTimes);
+            
             var conditionExposedAndTransitionTime = tf.logical_and(tf.equal(currentStages, tf.constant((int)Stage.Exposed)), 
                 tf.equal(_nextStageTimes, tf.constant((int)Context.CurrentTick)));
+            
             newTransitionTimes = tf.where(conditionExposedAndTransitionTime,
                 (tf.fill(tf.shape(newTransitionTimes),tf.constant((int)Context.CurrentTick) + 
                                                       _learnableParams.InfectedToRecoveredTime)), newTransitionTimes);
@@ -178,13 +180,13 @@ namespace EpidemicSpread.Model
             var adultAgents = tf.logical_and(tf.greater(AgeGroups, ChildUpperIndex), tf.less_equal(AgeGroups, AdultUpperIndex));
             var elderlyAgents = tf.greater(AgeGroups, AdultUpperIndex);
             MeanInteractions = tf.Variable(MeanInteractions.assign(tf.where(
-                childAgents, tf.fill(tf.shape(MeanInteractions), Mu[0]),
+                childAgents, tf.fill(tf.shape(MeanInteractions), _mu[0]),
                 MeanInteractions)));
             MeanInteractions = tf.Variable(MeanInteractions.assign(tf.where(
-                adultAgents, tf.fill(tf.shape(MeanInteractions), Mu[1]),
+                adultAgents, tf.fill(tf.shape(MeanInteractions), _mu[1]),
                 MeanInteractions)));
             MeanInteractions = tf.Variable(MeanInteractions.assign(tf.where(
-                elderlyAgents, tf.fill(tf.shape(MeanInteractions), Mu[2]),
+                elderlyAgents, tf.fill(tf.shape(MeanInteractions), _mu[2]),
                 MeanInteractions)));
         }
         

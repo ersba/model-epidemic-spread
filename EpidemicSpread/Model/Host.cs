@@ -51,12 +51,12 @@ namespace EpidemicSpread.Model
 
         private void Die()
         {
-            UnregisterHandle.Invoke(_infectionLayer, this);
+           // UnregisterHandle.Invoke(_infectionLayer, this);
         }
 
         private void Progress()
         {
-            MyStage = _infectionLayer.Stages[Index].numpy();
+            MyStage = _infectionLayer.ArrayStages[Index];
             // if (MyStage == (int)Stage.Recovered) Console.WriteLine("I'm recovered!!!");
         }
 

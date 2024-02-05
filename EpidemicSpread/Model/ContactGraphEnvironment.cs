@@ -26,8 +26,6 @@ namespace EpidemicSpread.Model
 
         private Tensor _edgeAttribute;
 
-        private Tensor _nodeFeatures;
-
         private Tensor _sfSusceptibility; 
         
         private Tensor _sfInfector;
@@ -36,6 +34,8 @@ namespace EpidemicSpread.Model
 
         private Tensor _exposedToday;
         
+        private int[] _arrayExposedToday;
+        
         public ContactGraphEnvironment(int agentCount, int steps)
         {
             InitEdgesWithCsv(agentCount); 
@@ -43,11 +43,12 @@ namespace EpidemicSpread.Model
             _sfSusceptibility = tf.constant(new float[] {0.35f, 0.69f, 1.03f, 1.03f, 1.03f, 1.03f, 1.27f, 1.52f});
             _sfInfector = tf.constant(new float[] {0.0f, 0.33f, 0.72f, 0.0f, 0.0f});
             _edgeAttribute = tf.constant(1f);
+            _arrayExposedToday = new int[agentCount];
         }
 
         public bool Interact(int index)
         {
-            return _exposedToday[index].numpy() == 1;
+            return _arrayExposedToday[index] == 1;
         }
         
         protected override Tensor Message(Tensor sourceFeature, Tensor targetFeature, int currentTick)
@@ -62,6 +63,7 @@ namespace EpidemicSpread.Model
             var p =  tf.Variable(tf.concat(new [] { 1 - probabilityNotInfected, probabilityNotInfected }, axis: 1));
             var potentiallyExposedToday = tf.Variable(GumbelSoftmax.Execute(p)[Slice.All,0], dtype: TF_DataType.TF_INT32);
             UpdateExposedToday(potentiallyExposedToday, nodeFeatures);
+            _arrayExposedToday = _exposedToday.numpy().ToArray<int>();
             return tf.expand_dims(_exposedToday, axis: 1);
         }
         
