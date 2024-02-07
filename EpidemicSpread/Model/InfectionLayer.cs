@@ -64,6 +64,7 @@ namespace EpidemicSpread.Model
         private const int AdultUpperIndex = 6;
 
         private readonly int[] _mu = { 2, 4, 3 };
+        
 
 
         public override bool InitLayer(LayerInitData layerInitData, RegisterAgent registerAgentHandle,
@@ -77,11 +78,13 @@ namespace EpidemicSpread.Model
             AgentManager.Spawn<Host, InfectionLayer>().ToList();
             _learnableParams = LearnableParams.Instance;
             InitStages();
+            ArrayStages = Stages.numpy().ToArray<int>();
             InitMeanInteractions();
             InitTimeVariables();
             // _infectedIndex = tf.expand_dims(tf.greater(tf.squeeze(Stages), tf.constant(0)), axis: 1);
             _infectedIndex = tf.greater(Stages, tf.constant(0));
             // tf.print(_infectedIndex);
+            
             return initiated;
         }
 
@@ -92,7 +95,7 @@ namespace EpidemicSpread.Model
                     new[] { AgeGroups, tf.stop_gradient(Stages), tf.cast(_infectedIndex, TF_DataType.TF_INT32), _infectedTime, MeanInteractions },
                     axis: 1);
             var exposedToday = ContactEnvironment.Forward(nodeFeatures, (int)Context.CurrentTick);
-            var nextStages = updateStages(exposedToday);
+            var nextStages = UpdateStages(exposedToday);
             _nextStageTimes = tf.Variable(UpdateNextStageTimes(exposedToday));
             Stages = tf.Variable(nextStages);
             _infectedIndex = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedIndex), tf.constant(true)), _infectedIndex);
@@ -132,7 +135,7 @@ namespace EpidemicSpread.Model
             return result;
         }
 
-        private Tensor updateStages(Tensor exposedToday)
+        private Tensor UpdateStages(Tensor exposedToday)
         {
             var transitionToInfected = tf.Variable(tf.cast(tf.less_equal(_nextStageTimes, (int)Context.CurrentTick), 
                 TF_DataType.TF_INT32) * (int)Stage.Infected) + tf.Variable(tf.cast(tf.greater(_nextStageTimes, 
@@ -168,7 +171,7 @@ namespace EpidemicSpread.Model
         
         private void InitStages()
         {
-            var probabilityInfected = _learnableParams.InitialInfectionRate / tf.constant(100) * tf.ones(new Shape(AgentCount, 1));
+            var probabilityInfected = _learnableParams.InitialInfectionRate * tf.ones(new Shape(AgentCount, 1));
             var p = tf.Variable(tf.concat(new [] { probabilityInfected, 1 - probabilityInfected }, axis: 1));
             Stages = tf.Variable(tf.expand_dims(tf.cast(GumbelSoftmax.Execute(p)[Slice.All,0], dtype: TF_DataType.TF_INT32), axis: 1) * 2);
         }
