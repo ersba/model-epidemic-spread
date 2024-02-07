@@ -24,26 +24,17 @@ namespace EpidemicSpread.Model
         
         private Tensor _edges;
 
-        private Tensor _edgeAttribute;
-
-        private Tensor _susceptibility; 
-        
-        private Tensor _infector;
-
         private Tensor _lamdaGammaIntegrals;
 
         private Tensor _exposedToday;
         
         private int[] _arrayExposedToday;
         
-        public ContactGraphEnvironment(int agentCount, int steps)
+        public ContactGraphEnvironment()
         {
-            InitEdgesWithCsv(agentCount); 
-            SetLamdaGammaIntegrals(5.15, 2.14, steps);
-            _susceptibility = tf.constant(new float[] {0.35f, 0.69f, 1.03f, 1.03f, 1.03f, 1.03f, 1.27f, 1.52f});
-            _infector = tf.constant(new float[] {0.0f, 0.33f, 0.72f, 0.0f, 0.0f});
-            _edgeAttribute = tf.constant(1f);
-            _arrayExposedToday = new int[agentCount];
+            InitEdgesWithCsv(Params.AgentCount); 
+            SetLamdaGammaIntegrals(5.15, 2.14, Params.Steps);
+            _arrayExposedToday = new int[Params.AgentCount];
         }
 
         public bool Interact(int index)
@@ -111,10 +102,10 @@ namespace EpidemicSpread.Model
         private Tensor Lamda(Tensor sourceFeature, Tensor targetFeature, int currentTick)
         {
             var targetAgeGroup = tf.gather(targetFeature, tf.constant(0), axis: 1);
-            var targetSusceptibility = tf.gather(_susceptibility, targetAgeGroup);
+            var targetSusceptibility = tf.gather(Params.Susceptibility, targetAgeGroup);
             var sourceStage = tf.gather(sourceFeature, tf.constant(1), axis: 1);
-            var sourceInfector = tf.gather(_infector, sourceStage);
-            var bN = _edgeAttribute;
+            var sourceInfector = tf.gather(Params.Infector, sourceStage);
+            var bN = Params.EdgeAttribute;
             var integrals = tf.cast(tf.zeros_like(sourceStage), TF_DataType.TF_FLOAT);
             var sourceInfectedIndex = tf.cast(tf.gather(sourceFeature, tf.constant(2), axis: 1), dtype: TF_DataType.TF_BOOL);
             // var sourceInfectedTime = tf.gather(tf.boolean_mask(sourceFeature, sourceInfectedIndex, axis: 0), tf.constant(3), axis: 1);

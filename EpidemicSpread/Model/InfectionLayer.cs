@@ -20,8 +20,6 @@ using MongoDB.Driver;
 using PureHDF.Selections;
 using Serilog.Formatting.Display;
 using Tensorflow;
-using Tensorflow.Keras.Metrics;
-using Tensorflow.Keras.Utils;
 using static Tensorflow.Binding;
 using static Tensorflow.KerasApi;
 using Tensorflow.NumPy;
@@ -31,12 +29,6 @@ namespace EpidemicSpread.Model
 {
     public class InfectionLayer : AbstractLayer, ISteppedActiveLayer
     {
-        [PropertyDescription]
-        public int AgentCount { get; set; }
-        
-        [PropertyDescription]
-        public int Steps { get; set; }
-        
         public ContactGraphEnvironment ContactEnvironment { get; private set; }
         
         public ResourceVariable AgeGroups { get; private set; }
@@ -58,12 +50,6 @@ namespace EpidemicSpread.Model
         private ResourceVariable _infectedTime;
 
         private ResourceVariable _nextStageTimes;
-
-        private const int ChildUpperIndex = 1;
-
-        private const int AdultUpperIndex = 6;
-
-        private readonly int[] _mu = { 2, 4, 3 };
         
 
 
@@ -71,9 +57,9 @@ namespace EpidemicSpread.Model
             UnregisterAgent unregisterAgentHandle)
         {
             var initiated = base.InitLayer(layerInitData, registerAgentHandle, unregisterAgentHandle);
-            _infinityTime = Steps + 1;
-            ContactEnvironment = new ContactGraphEnvironment(AgentCount, Steps);
-            AgeGroups = tf.Variable(tf.zeros(new Shape(AgentCount, 1), TF_DataType.TF_INT32));
+            _infinityTime = Params.Steps + 1;
+            ContactEnvironment = new ContactGraphEnvironment();
+            AgeGroups = tf.Variable(tf.zeros(new Shape(Params.AgentCount, 1), TF_DataType.TF_INT32));
             AgentManager = layerInitData.Container.Resolve<IAgentManager>();
             AgentManager.Spawn<Host, InfectionLayer>().ToList();
             _learnableParams = LearnableParams.Instance;
@@ -95,6 +81,7 @@ namespace EpidemicSpread.Model
                     new[] { AgeGroups, tf.stop_gradient(Stages), tf.cast(_infectedIndex, TF_DataType.TF_INT32), _infectedTime, MeanInteractions },
                     axis: 1);
             var exposedToday = ContactEnvironment.Forward(nodeFeatures, (int)Context.CurrentTick);
+            // var exposedToday = tf.zeros_like(Stages);
             var nextStages = UpdateStages(exposedToday);
             _nextStageTimes = tf.Variable(UpdateNextStageTimes(exposedToday));
             Stages = tf.Variable(nextStages);
@@ -171,32 +158,32 @@ namespace EpidemicSpread.Model
         
         private void InitStages()
         {
-            var probabilityInfected = _learnableParams.InitialInfectionRate * tf.ones(new Shape(AgentCount, 1));
+            var probabilityInfected = _learnableParams.InitialInfectionRate * tf.ones(new Shape(Params.AgentCount, 1));
             var p = tf.Variable(tf.concat(new [] { probabilityInfected, 1 - probabilityInfected }, axis: 1));
             Stages = tf.Variable(tf.expand_dims(tf.cast(GumbelSoftmax.Execute(p)[Slice.All,0], dtype: TF_DataType.TF_INT32), axis: 1) * 2);
         }
 
         private void InitMeanInteractions()
         {
-            MeanInteractions = tf.Variable(tf.zeros(new Shape(AgentCount, 1)), dtype: TF_DataType.TF_INT32);
-            var childAgents = tf.less_equal(AgeGroups, ChildUpperIndex);
-            var adultAgents = tf.logical_and(tf.greater(AgeGroups, ChildUpperIndex), tf.less_equal(AgeGroups, AdultUpperIndex));
-            var elderlyAgents = tf.greater(AgeGroups, AdultUpperIndex);
+            MeanInteractions = tf.Variable(tf.zeros(new Shape(Params.AgentCount, 1)), dtype: TF_DataType.TF_INT32);
+            var childAgents = tf.less_equal(AgeGroups, Params.ChildUpperIndex);
+            var adultAgents = tf.logical_and(tf.greater(AgeGroups, Params.ChildUpperIndex), tf.less_equal(AgeGroups, Params.AdultUpperIndex));
+            var elderlyAgents = tf.greater(AgeGroups, Params.AdultUpperIndex);
             MeanInteractions = tf.Variable(MeanInteractions.assign(tf.where(
-                childAgents, tf.fill(tf.shape(MeanInteractions), _mu[0]),
+                childAgents, tf.fill(tf.shape(MeanInteractions), Params.Mu[0]),
                 MeanInteractions)));
             MeanInteractions = tf.Variable(MeanInteractions.assign(tf.where(
-                adultAgents, tf.fill(tf.shape(MeanInteractions), _mu[1]),
+                adultAgents, tf.fill(tf.shape(MeanInteractions), Params.Mu[1]),
                 MeanInteractions)));
             MeanInteractions = tf.Variable(MeanInteractions.assign(tf.where(
-                elderlyAgents, tf.fill(tf.shape(MeanInteractions), _mu[2]),
+                elderlyAgents, tf.fill(tf.shape(MeanInteractions), Params.Mu[2]),
                 MeanInteractions)));
         }
         
         private void InitTimeVariables()
         {
-            _infectedTime = tf.Variable(_infinityTime * tf.ones(new Shape(AgentCount, 1), dtype: TF_DataType.TF_INT32));
-            _nextStageTimes = tf.Variable(_infinityTime * tf.ones(new Shape(AgentCount, 1), dtype: TF_DataType.TF_INT32));
+            _infectedTime = tf.Variable(_infinityTime * tf.ones(new Shape(Params.AgentCount, 1), dtype: TF_DataType.TF_INT32));
+            _nextStageTimes = tf.Variable(_infinityTime * tf.ones(new Shape(Params.AgentCount, 1), dtype: TF_DataType.TF_INT32));
             var exposedCondition = tf.equal(Stages, tf.Variable((int)Stage.Exposed, dtype: TF_DataType.TF_INT32));
             // var infectedCondition = tf.equal(tf.squeeze(Stages), tf.Variable((int)Stage.Infected, dtype: TF_DataType.TF_INT32));
             var infectedCondition = tf.equal(Stages, tf.Variable((int)Stage.Infected, dtype: TF_DataType.TF_INT32));

@@ -8,17 +8,7 @@
 	},
 	"layers":[
 		{
-			"name":"InfectionLayer",
-			"mapping": [
-				{
-					"parameter": "Steps",
-					"value": 50
-				},
-				{
-					"parameter": "AgentCount",
-					"value": 5000
-				}
-			]
+			"name":"InfectionLayer"
 		}
 	],
 	"agents":[
