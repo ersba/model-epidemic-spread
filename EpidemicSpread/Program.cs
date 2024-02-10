@@ -52,7 +52,7 @@ namespace EpidemicSpread
                 Console.WriteLine(grad);
                 // calibNn.Train(1);
 
-                Console.WriteLine("Successfully executed iterations: " + _handle.Iterations);
+                // Console.WriteLine("Successfully executed iterations: " + _handle.Iterations);
             }
 
             // _starter.Dispose();
