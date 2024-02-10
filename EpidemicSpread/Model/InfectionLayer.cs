@@ -35,6 +35,8 @@ namespace EpidemicSpread.Model
         
         public ResourceVariable Stages { get; private set; }
         
+        public ResourceVariable Deaths { get; private set; }
+        
         public int[] ArrayStages { get; private set; }
         
         private ResourceVariable MeanInteractions { get; set; }
@@ -88,6 +90,10 @@ namespace EpidemicSpread.Model
             _infectedIndex = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedIndex), tf.constant(true)), _infectedIndex);
             _infectedTime = tf.Variable(tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedTime), tf.constant((int)Context.CurrentTick)), _infectedTime));
             ArrayStages = Stages.numpy().ToArray<int>();
+            if (Context.CurrentTick == Params.Steps)
+            {
+                Deaths = tf.Variable(tf.expand_dims(tf.reduce_sum(tf.cast(tf.equal(Stages, tf.constant((int)Stage.Mortality)), TF_DataType.TF_INT32))));
+            }
         }
 
         public void PreTick()
