@@ -9,19 +9,21 @@ namespace EpidemicSpread
     public class LearnableParams
     {
         private static LearnableParams _instance;
-        public ResourceVariable InitialInfectionRate { get; set; }
-        public ResourceVariable R0Value { get; set; }
-        public ResourceVariable MortalityRate { get; set; }
-        public ResourceVariable ExposedToInfectedTime { get; set; }
-        public ResourceVariable InfectedToRecoveredTime { get; set; }
+        public Tensor InitialInfectionRate { get; set; }
+        public Tensor R0Value { get; set; }
+        public Tensor MortalityRate { get; set; }
+        public Tensor ExposedToInfectedTime { get; set; }
+        public Tensor InfectedToRecoveredTime { get; set; }
+        
+        public Tensor TestTensor { get; set; }
         
         private LearnableParams()
         {
-            InitialInfectionRate = tf.Variable(0.05, dtype: TF_DataType.TF_FLOAT);
-            R0Value = tf.Variable(5.18, dtype: TF_DataType.TF_FLOAT);
-            MortalityRate = tf.Variable(0.1, dtype: TF_DataType.TF_FLOAT);
-            ExposedToInfectedTime = tf.Variable(3, dtype: TF_DataType.TF_INT32);
-            InfectedToRecoveredTime = tf.Variable(5, dtype: TF_DataType.TF_INT32);
+            InitialInfectionRate = tf.constant(0.05, dtype: TF_DataType.TF_FLOAT);
+            R0Value = tf.constant(5.18, dtype: TF_DataType.TF_FLOAT);
+            MortalityRate = tf.constant(0.1, dtype: TF_DataType.TF_FLOAT);
+            ExposedToInfectedTime = tf.constant(3, dtype: TF_DataType.TF_INT32);
+            InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_INT32);
         }
         
         public static LearnableParams Instance

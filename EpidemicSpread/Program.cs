@@ -18,42 +18,27 @@ namespace EpidemicSpread
     internal static class Program
     
     {
-        public static ResourceVariable Deaths;
+        public static Tensor Deaths;
         
         private static SimulationStarter _starter;
         
         private static SimulationWorkflowState _handle;
         private static void Main()
         {
-            
-            // var calibNn = new SimpleCalibNn();
-            using (var g = tf.GradientTape())
+            for (int i = 0; i < 1; i++)
             {
-                Deaths = tf.Variable(10f);
-                g.watch(Deaths);
-            // var description = new ModelDescription();
-            // description.AddLayer<InfectionLayer>();
-            // description.AddAgent<Host, InfectionLayer>();
-            //
-            // var file = File.ReadAllText("config.json");
-            // var config = SimulationConfig.Deserialize(file);
-            // Params.Steps = (int)(config.Globals.Steps ?? 0);
-            // Params.AgentCount = config.AgentMappings[0].InstanceCount ?? 0;
-            //
-            // _starter = SimulationStarter.Start(description, config);
-            // _handle = _starter.Run();
+                var calibNn = new SimpleCalibNn();
+                calibNn.Train(100);
+            }
             
-            // Deaths = ((InfectionLayer)_handle.Model.AllActiveLayers.First()).Deaths;
-
-            var newDeaths = Computation(Deaths);
     
-            var error = tf.square(newDeaths - tf.constant(100f));
-                var grad = g.gradient(error, Deaths);
-                Console.WriteLine(grad);
-                // calibNn.Train(1);
+            // var error = tf.square(newDeaths - tf.constant(100f));
+            //     var grad = g.gradient(error, Deaths);
+            //     Console.WriteLine(grad);
+
 
                 // Console.WriteLine("Successfully executed iterations: " + _handle.Iterations);
-            }
+            // }
 
             // _starter.Dispose();
         }
@@ -65,19 +50,19 @@ namespace EpidemicSpread
         public static Tensor EpidemicSpreadSimulation()  
         {
             var description = new ModelDescription();
-            description.AddLayer<InfectionLayer>();
-            description.AddAgent<Host, InfectionLayer>();
+            description.AddLayer<TestLayer>();
             
             var file = File.ReadAllText("config.json");
             var config = SimulationConfig.Deserialize(file);
             Params.Steps = (int)(config.Globals.Steps ?? 0);
             Params.AgentCount = config.AgentMappings[0].InstanceCount ?? 0;
             
-            _starter = SimulationStarter.Start(description, config);
-            _handle = _starter.Run();
-            var targetValue = ((InfectionLayer)_handle.Model.AllActiveLayers.First()).Deaths;
-            Console.WriteLine("Successfully executed iterations: " + _handle.Iterations);
-            return targetValue;
+            var starter = SimulationStarter.Start(description, config);
+            var handle = starter.Run();
+            Deaths = ((TestLayer)handle.Model.AllActiveLayers.First()).Deaths;
+            starter.Dispose();
+            Console.WriteLine("Successfully executed iterations: " + handle.Iterations);
+            return Deaths;
         }
 
         public static void Dispose()

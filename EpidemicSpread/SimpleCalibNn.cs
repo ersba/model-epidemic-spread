@@ -11,7 +11,7 @@ using static Tensorflow.Binding;
 using static Tensorflow.KerasApi;
 using Tensorflow.Keras.Engine;
 using Tensorflow.Keras.Losses;
-
+using Tensorflow.Keras.Metrics;
 
 namespace EpidemicSpread
 {
@@ -23,18 +23,28 @@ namespace EpidemicSpread
         
         private NDArray _labels;
         
+        private string _modelPath;
+
+        public Tensor Predicted;
+        
         public SimpleCalibNn()
         {
+            string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
+            _modelPath = Path.Combine(projectDirectory, "simple_calibnn");
             LoadData();
             InitModel();
-            CompileModel();
+            
         }
         
         public void Train(int epochs = 10)
         {
-            _model.fit(_features, _labels, batch_size: 1, epochs: 1, verbose: 1);
-            _model.save("Resources/model.json");
-            _model.save_weights("Resources/model.h5");
+            // string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
+            // string modelPath = Path.Combine(projectDirectory, "modelnn");
+            // string weightsPath = Path.Combine(projectDirectory, "model.h5");
+            
+            _model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
+            _model.save(_modelPath, save_format:"tf");
+             // _model.save_weights(weightsPath);
         }
         private void LoadData()
         {
@@ -45,42 +55,57 @@ namespace EpidemicSpread
 
             _features = np.array(featureData).reshape(new Shape(-1, 1)); // Stellen Sie sicher, dass die Dimensionen stimmen
             _labels = np.array(labelData).reshape(new Shape(-1, 1)); // Stellen Sie sicher, dass die Dimensionen stimmen
-
+            
         }
         
         private void InitModel()
         {
-            string modelPath = "Resources/model.json";
-            string weightPath = "Resources/model.h5";
+            string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
+            string weightsPath = Path.Combine(projectDirectory, "model.h5");
             
-            if (File.Exists(modelPath) && File.Exists(weightPath))
+            
+            // string modelPath = "model";
+            // string weightsPath = "model.h5";
+            // Console.WriteLine(Directory.GetCurrentDirectory());
+            // var model = keras.models.load_model(modelPath);
+            Console.WriteLine(_modelPath);
+            Console.WriteLine(Directory.Exists(_modelPath));
+            if (Directory.Exists(_modelPath))
             {
-                var model = keras.models.load_model(modelPath);
-                model.load_weights(weightPath);
+                var model = keras.models.load_model(_modelPath);
+                // model.load_weights(weightsPath);
                 _model = (Sequential)model;
+                // _model.load_weights(weightsPath);
+                // _model.summary();
             }
             else
             {
                 _model = keras.Sequential();
-                _model.add(keras.layers.Dense(32, activation: "relu", input_shape: new Shape(1)));
-                _model.add(keras.layers.Dense(64, activation: "relu"));
-                _model.add(keras.layers.Dense(1, activation: "sigmoid"));
+                _model.add(keras.layers.Dense(units: 32, activation: null, input_shape: new Shape(1)));
+                _model.add(keras.layers.LeakyReLU(alpha: 0.01f));
+                _model.add(keras.layers.Dense(64));
+                _model.add(keras.layers.LeakyReLU(alpha: 0.01f));
+                _model.add(keras.layers.Dense(5));
+                // _model.load_weights(weightsPath);
             }
-        }
-        private void CompileModel()
-        {
-            // _model.compile(optimizer: keras.optimizers.Adam(), loss: keras.losses.MeanAbsoluteError(), metrics: new[] {"accuracy"});
-            _model.compile(optimizer: keras.optimizers.Adam(), loss: new CustomLoss(), metrics: new[] {"accuracy"});
+            _model.compile(optimizer: keras.optimizers.Adam(), loss: new CustomLoss());
         }
     }
     class CustomLoss : ILossFunc
     {
         public Tensor Call(Tensor yTrue, Tensor yPred, Tensor sampleWeight = null)
         {
-            
-            var predictedDeaths = Program.Deaths;
-            // Program.Dispose();
-            var loss = tf.reduce_mean(tf.square(yTrue - predictedDeaths));
+            LearnableParams learnableParams = LearnableParams.Instance;
+            var softSample = tf.constant(yPred[0, 0].numpy());
+            var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
+            tf.print(hardSample);
+            learnableParams.InfectedToRecoveredTime = tf.stop_gradient(hardSample - softSample)+ yPred[0, 0];
+            tf.print(yPred[0,0]);
+            var predictedDeaths = Program.EpidemicSpreadSimulation();
+
+            learnableParams.MortalityRate = tf.constant(0.1, dtype: TF_DataType.TF_FLOAT); 
+            learnableParams.InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_INT32);
+            var loss = tf.square(yTrue - predictedDeaths);
             return loss;
         }
 
