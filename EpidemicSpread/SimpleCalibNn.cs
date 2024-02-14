@@ -42,7 +42,7 @@ namespace EpidemicSpread
             // string modelPath = Path.Combine(projectDirectory, "modelnn");
             // string weightsPath = Path.Combine(projectDirectory, "model.h5");
             
-            _model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
+             _model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
             _model.save(_modelPath, save_format:"tf");
              // _model.save_weights(weightsPath);
         }
@@ -85,7 +85,7 @@ namespace EpidemicSpread
                 _model.add(keras.layers.LeakyReLU(alpha: 0.01f));
                 _model.add(keras.layers.Dense(64));
                 _model.add(keras.layers.LeakyReLU(alpha: 0.01f));
-                _model.add(keras.layers.Dense(5));
+                _model.add(keras.layers.Dense(5, activation: "sigmoid"));
                 // _model.load_weights(weightsPath);
             }
             _model.compile(optimizer: keras.optimizers.Adam(), loss: new CustomLoss());
@@ -99,12 +99,14 @@ namespace EpidemicSpread
             var softSample = tf.constant(yPred[0, 0].numpy());
             var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
             tf.print(hardSample);
-            learnableParams.InfectedToRecoveredTime = tf.stop_gradient(hardSample - softSample)+ yPred[0, 0];
+            learnableParams.MortalityRate = tf.cast(tf.stop_gradient(hardSample - softSample)+ yPred[0, 0], TF_DataType.TF_FLOAT);
+            // learnableParams.InfectedToRecoveredTime = tf.cast(yPred[0, 0], TF_DataType.DtInt32Ref);
             tf.print(yPred[0,0]);
             var predictedDeaths = Program.EpidemicSpreadSimulation();
 
             learnableParams.MortalityRate = tf.constant(0.1, dtype: TF_DataType.TF_FLOAT); 
-            learnableParams.InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_INT32);
+            learnableParams.InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_FLOAT);
+            learnableParams.InitialInfectionRate = tf.constant(0.05, dtype: TF_DataType.TF_FLOAT);
             var loss = tf.square(yTrue - predictedDeaths);
             return loss;
         }

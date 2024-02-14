@@ -5,11 +5,11 @@ namespace EpidemicSpread
 {
     public static class Params
     {
-        public static readonly int ChildUpperIndex = 1;
+        public static readonly float ChildUpperIndex = 1f;
         
-        public static readonly int AdultUpperIndex = 6;
+        public static readonly float AdultUpperIndex = 6f;
         
-        public static readonly int[] Mu = { 2, 4, 3 };
+        public static readonly float[] Mu = { 2f, 4f, 3f };
 
         public static int Steps = 0;
 

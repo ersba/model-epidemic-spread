@@ -18,29 +18,17 @@ namespace EpidemicSpread
     internal static class Program
     
     {
-        public static Tensor Deaths;
-        
-        private static SimulationStarter _starter;
-        
-        private static SimulationWorkflowState _handle;
+        private static Tensor Deaths { get; set; }
         private static void Main()
-        {
-            for (int i = 0; i < 1; i++)
-            {
-                var calibNn = new SimpleCalibNn();
-                calibNn.Train(100);
-            }
+        { 
+            var calibNn = new SimpleCalibNn();
+            calibNn.Train(10);
             
-    
-            // var error = tf.square(newDeaths - tf.constant(100f));
-            //     var grad = g.gradient(error, Deaths);
-            //     Console.WriteLine(grad);
-
-
-                // Console.WriteLine("Successfully executed iterations: " + _handle.Iterations);
-            // }
-
-            // _starter.Dispose();
+            // var t = tf.constant(1.0f, dtype: TF_DataType.TF_FLOAT);
+            // tf.print(t);
+            // tf.print(tf.cast(t, TF_DataType.TF_BOOL));
+            
+            // EpidemicSpreadSimulation();
         }
 
         private static Tensor Computation(ResourceVariable deaths)
@@ -50,7 +38,9 @@ namespace EpidemicSpread
         public static Tensor EpidemicSpreadSimulation()  
         {
             var description = new ModelDescription();
-            description.AddLayer<TestLayer>();
+            // description.AddLayer<TestLayer>();
+            description.AddLayer<InfectionLayer>();
+            description.AddAgent<Host, InfectionLayer>();
             
             var file = File.ReadAllText("config.json");
             var config = SimulationConfig.Deserialize(file);
@@ -59,15 +49,12 @@ namespace EpidemicSpread
             
             var starter = SimulationStarter.Start(description, config);
             var handle = starter.Run();
-            Deaths = ((TestLayer)handle.Model.AllActiveLayers.First()).Deaths;
+            // var deaths = ((TestLayer)handle.Model.AllActiveLayers.First()).Deaths;
+            var deaths = ((InfectionLayer)handle.Model.AllActiveLayers.First()).Deaths;
+            Console.WriteLine(deaths);
             starter.Dispose();
             Console.WriteLine("Successfully executed iterations: " + handle.Iterations);
-            return Deaths;
-        }
-
-        public static void Dispose()
-        {
-            _starter.Dispose();
+            return deaths;
         }
     }
 }

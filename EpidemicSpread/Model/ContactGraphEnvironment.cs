@@ -54,7 +54,7 @@ namespace EpidemicSpread.Model
             var p =  tf.concat(new [] { 1 - probabilityNotInfected, probabilityNotInfected }, axis: 1);
             var potentiallyExposedToday = GumbelSoftmax.Execute(p)[Slice.All,0];
             UpdateExposedToday(potentiallyExposedToday, nodeFeatures);
-            _arrayExposedToday = _exposedToday.numpy().ToArray<int>();
+            _arrayExposedToday = tf.cast(_exposedToday, TF_DataType.TF_INT32).numpy().ToArray<int>();
             return tf.expand_dims(_exposedToday, axis: 1);
         }
         
@@ -102,9 +102,9 @@ namespace EpidemicSpread.Model
         private Tensor Lamda(Tensor sourceFeature, Tensor targetFeature, int currentTick)
         {
             var targetAgeGroup = tf.gather(targetFeature, tf.constant(0), axis: 1);
-            var targetSusceptibility = tf.gather(Params.Susceptibility, targetAgeGroup);
+            var targetSusceptibility = tf.gather(Params.Susceptibility, tf.cast(targetAgeGroup, TF_DataType.TF_INT32));
             var sourceStage = tf.gather(sourceFeature, tf.constant(1), axis: 1);
-            var sourceInfector = tf.gather(Params.Infector, sourceStage);
+            var sourceInfector = tf.gather(Params.Infector, tf.cast(sourceStage,TF_DataType.TF_INT32));
             var bN = Params.EdgeAttribute;
             var integrals = tf.cast(tf.zeros_like(sourceStage), TF_DataType.TF_FLOAT);
             var sourceInfectedIndex = tf.cast(tf.gather(sourceFeature, tf.constant(2), axis: 1), dtype: TF_DataType.TF_BOOL);
@@ -112,7 +112,7 @@ namespace EpidemicSpread.Model
             var sourceInfectedTime = tf.gather(sourceFeature, tf.constant(3), axis: 1);
             var tick = tf.ones_like(sourceInfectedTime) * currentTick;
             sourceInfectedTime = tf.abs(tick - sourceInfectedTime);
-            integrals = tf.where(sourceInfectedIndex, tf.gather(_lamdaGammaIntegrals, sourceInfectedTime), integrals);
+            integrals = tf.where(sourceInfectedIndex, tf.gather(_lamdaGammaIntegrals, tf.cast(sourceInfectedTime, TF_DataType.TF_INT32)), integrals);
             var meanInteractions = tf.gather(targetFeature, tf.constant(4), axis: 1);
             // tf.print(tf.shape(targetSusceptibility));
             // tf.print(tf.shape(sourceInfector));
@@ -130,10 +130,9 @@ namespace EpidemicSpread.Model
         // exposed to a possible source of infection
         private void UpdateExposedToday(Tensor potentiallyExposed, Tensor nodeFeatures)
         {
-            // var susceptibleMask = tf.equal(_layer.Stages, tf.Variable((int)Stage.Susceptible));
-            var susceptibleMask = tf.equal(tf.gather(nodeFeatures, tf.constant(1), axis: 1), tf.constant((int)Stage.Susceptible));
+            var susceptibleMask = tf.equal(tf.gather(nodeFeatures, tf.constant(1), axis: 1), tf.constant((int)Stage.Susceptible, TF_DataType.TF_FLOAT));
             // tf.print(tf.shape(susceptibleMask));
-            _exposedToday = tf.cast(susceptibleMask, TF_DataType.TF_INT32) * potentiallyExposed;
+            _exposedToday = tf.cast(susceptibleMask, TF_DataType.TF_FLOAT) * potentiallyExposed;
         }
         private void SetLamdaGammaIntegrals(double scale, double rate, int steps)
         {

@@ -9,8 +9,9 @@ namespace EpidemicSpread
         {
             var gumbelNoise = -tf.math.log(-tf.math.log(tf.random.uniform(probabilities.shape)));
             var softSample = tf.nn.softmax((tf.math.log(probabilities + 1e-9) + gumbelNoise) / temperature);
-            var hardSample = tf.cast(tf.equal(softSample, tf.reduce_max(softSample, axis: 1, keepdims: true)),TF_DataType.TF_INT32);
-            return tf.cast(tf.stop_gradient(hardSample - softSample) + softSample, TF_DataType.TF_INT32);
+            var cutSoftSample = tf.constant(softSample.numpy());
+            var hardSample = tf.cast(tf.equal(cutSoftSample, tf.reduce_max(cutSoftSample, axis: 1, keepdims: true)),TF_DataType.TF_INT32);
+            return tf.cast(tf.stop_gradient(hardSample - cutSoftSample) + softSample, TF_DataType.TF_FLOAT);
         }
     }
 }

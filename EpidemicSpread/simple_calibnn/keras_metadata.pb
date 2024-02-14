@@ -1,5 +1,5 @@
 
-†&root"_tf_keras_layer*Ä&{
+°&root"_tf_keras_layer*Å&{
   "name": "sequential",
   "trainable": true,
   "expects_training_arg": false,
@@ -133,7 +133,7 @@
         "class_name": "Dense",
         "config": {
           "units": 5,
-          "activation": "linear",
+          "activation": "sigmoid",
           "use_bias": true,
           "kernel_initializer": {
             "class_name": "GlorotUniform",
@@ -388,7 +388,7 @@
     ]
   }
 }2
-Îroot.layer_with_weights-2"_tf_keras_layer*¥{
+Ïroot.layer_with_weights-2"_tf_keras_layer*µ{
   "name": "dense_2",
   "trainable": true,
   "expects_training_arg": false,
@@ -412,7 +412,7 @@
   "class_name": "Dense",
   "config": {
     "units": 5,
-    "activation": "linear",
+    "activation": "sigmoid",
     "use_bias": true,
     "kernel_initializer": {
       "class_name": "GlorotUniform",

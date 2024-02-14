@@ -19,7 +19,7 @@ public abstract class TensorGraphEnvironment
 
     protected Tensor Propagate(Tensor edgeIndex, Tensor nodeFeatures, params object[] args)
     {
-        Tensor outFeatures = tf.Variable(tf.zeros_like(nodeFeatures));
+        Tensor outFeatures = tf.zeros_like(nodeFeatures);
         var sourceNode = tf.gather(edgeIndex, tf.constant(0));
         var targetNode = tf.gather(edgeIndex, tf.constant(1));
         var sourceFeature = tf.gather(nodeFeatures, sourceNode);
@@ -27,9 +27,6 @@ public abstract class TensorGraphEnvironment
 
         var edgeMessages = Message(sourceFeature, targetFeature, (int) args[0]);
         outFeatures = Aggregate(edgeMessages, targetNode, (int)nodeFeatures.shape[0]);
-        // tf.print(tf.shape(nodeFeatures));
-        // tf.print(tf.shape(outFeatures));
-        // tf.print(outFeatures);
         return outFeatures;
         
         
