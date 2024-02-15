@@ -85,7 +85,7 @@ namespace EpidemicSpread
                 _model.add(keras.layers.LeakyReLU(alpha: 0.01f));
                 _model.add(keras.layers.Dense(64));
                 _model.add(keras.layers.LeakyReLU(alpha: 0.01f));
-                _model.add(keras.layers.Dense(5, activation: "sigmoid"));
+                _model.add(keras.layers.Dense(5));
                 // _model.load_weights(weightsPath);
             }
             _model.compile(optimizer: keras.optimizers.Adam(), loss: new CustomLoss());
@@ -98,15 +98,18 @@ namespace EpidemicSpread
             LearnableParams learnableParams = LearnableParams.Instance;
             var softSample = tf.constant(yPred[0, 0].numpy());
             var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
-            tf.print(hardSample);
-            learnableParams.MortalityRate = tf.cast(tf.stop_gradient(hardSample - softSample)+ yPred[0, 0], TF_DataType.TF_FLOAT);
+            // tf.print(hardSample);
+            // learnableParams.MortalityRate = tf.cast(tf.stop_gradient(hardSample - softSample)+ yPred[0, 0], TF_DataType.TF_FLOAT);
+            learnableParams.MortalityRate = yPred[0, 0];
             // learnableParams.InfectedToRecoveredTime = tf.cast(yPred[0, 0], TF_DataType.DtInt32Ref);
+            Console.Write("Parameter: ");
             tf.print(yPred[0,0]);
             var predictedDeaths = Program.EpidemicSpreadSimulation();
-
+            Console.Write("Deaths: ");
+            tf.print(predictedDeaths);
             learnableParams.MortalityRate = tf.constant(0.1, dtype: TF_DataType.TF_FLOAT); 
             learnableParams.InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_FLOAT);
-            learnableParams.InitialInfectionRate = tf.constant(0.05, dtype: TF_DataType.TF_FLOAT);
+            learnableParams.InitialInfectionRate = tf.constant(0.9, dtype: TF_DataType.TF_FLOAT);
             var loss = tf.square(yTrue - predictedDeaths);
             return loss;
         }

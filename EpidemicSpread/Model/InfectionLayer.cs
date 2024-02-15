@@ -85,7 +85,7 @@ namespace EpidemicSpread.Model
             // Computation of Gradient
             var recoveredAndDead= Stages * tf.logical_and(tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)),
                 tf.less_equal(_nextStageTimes, (float) Context.CurrentTick)) / (float) Stage.Infected;
-            Deaths += tf.reduce_sum(recoveredAndDead) * _learnableParams.MortalityRate;
+            Deaths += tf.reduce_sum(recoveredAndDead) * (_learnableParams.MortalityRate/100);
             // var nodeFeatures =
             //     tf.concat(
             //         new[] { AgeGroups, tf.stop_gradient(Stages), tf.cast(_infectedIndex, TF_DataType.TF_FLOAT), _infectedTime, MeanInteractions },
@@ -142,7 +142,7 @@ namespace EpidemicSpread.Model
                 TF_DataType.TF_FLOAT) * (float)Stage.Recovered + tf.cast(tf.greater(_nextStageTimes, 
                 (float)Context.CurrentTick), TF_DataType.TF_FLOAT) * (float)Stage.Infected;
             var probabilityMortality = tf.cast(tf.logical_and(tf.equal(Stages, tf.constant((float)Stage.Infected)), 
-                tf.less_equal(_nextStageTimes, (float)Context.CurrentTick)), dtype: TF_DataType.TF_FLOAT) * _learnableParams.MortalityRate;
+                tf.less_equal(_nextStageTimes, (float)Context.CurrentTick)), dtype: TF_DataType.TF_FLOAT) * (_learnableParams.MortalityRate/100);
             // tf.print(probabilityMortality);
             var p = tf.concat(new [] { probabilityMortality, 1 - probabilityMortality }, axis: 1);
             var mortality = tf.cast(GumbelSoftmax.Execute(p)[Slice.All, 0], dtype: TF_DataType.TF_BOOL);

@@ -22,7 +22,7 @@ namespace EpidemicSpread
         private static void Main()
         { 
             var calibNn = new SimpleCalibNn();
-            calibNn.Train(10);
+            calibNn.Train(100);
             
             // var t = tf.constant(1.0f, dtype: TF_DataType.TF_FLOAT);
             // tf.print(t);
