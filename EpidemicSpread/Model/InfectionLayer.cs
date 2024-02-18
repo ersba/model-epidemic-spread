@@ -85,20 +85,21 @@ namespace EpidemicSpread.Model
             // Computation of Gradient
             var recoveredAndDead= Stages * tf.logical_and(tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)),
                 tf.less_equal(_nextStageTimes, (float) Context.CurrentTick)) / (float) Stage.Infected;
-            Deaths += tf.reduce_sum(recoveredAndDead) * (_learnableParams.MortalityRate/100);
+            
+            Deaths += tf.reduce_sum(recoveredAndDead) * (_learnableParams.MortalityRate);
             // var nodeFeatures =
             //     tf.concat(
             //         new[] { AgeGroups, tf.stop_gradient(Stages), tf.cast(_infectedIndex, TF_DataType.TF_FLOAT), _infectedTime, MeanInteractions },
             //         axis: 1);
             // // var exposedToday = ContactEnvironment.Forward(nodeFeatures, (int)Context.CurrentTick);
             // var exposedToday = tf.ones_like(Stages, TF_DataType.TF_FLOAT);
-            // // var exposedToday = tf.zeros_like(Stages);
-            // var nextStages = UpdateStages(exposedToday);
-            // _nextStageTimes = UpdateNextStageTimes(exposedToday);
-            // Stages = nextStages;
+            var exposedToday = tf.zeros_like(Stages);
+            var nextStages = UpdateStages(exposedToday);
+            _nextStageTimes = UpdateNextStageTimes(exposedToday);
+            Stages = nextStages;
             // _infectedIndex = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedIndex), tf.constant(true)), _infectedIndex);
             // _infectedTime = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedTime), tf.constant((float)Context.CurrentTick)), _infectedTime);
-            // ArrayStages = tf.cast(Stages, TF_DataType.TF_INT32).numpy().ToArray<int>();
+            ArrayStages = tf.cast(Stages, TF_DataType.TF_INT32).numpy().ToArray<int>();
         }
 
         public void PreTick()

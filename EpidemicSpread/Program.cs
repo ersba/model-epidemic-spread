@@ -22,18 +22,13 @@ namespace EpidemicSpread
         private static void Main()
         { 
             var calibNn = new SimpleCalibNn();
-            calibNn.Train(100);
+            calibNn.Train(800);
             
             // var t = tf.constant(1.0f, dtype: TF_DataType.TF_FLOAT);
             // tf.print(t);
             // tf.print(tf.cast(t, TF_DataType.TF_BOOL));
             
             // EpidemicSpreadSimulation();
-        }
-
-        private static Tensor Computation(ResourceVariable deaths)
-        {
-            return deaths * 2f;
         }
         public static Tensor EpidemicSpreadSimulation()  
         {
