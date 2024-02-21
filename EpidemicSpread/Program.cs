@@ -7,27 +7,26 @@ using System.Globalization;
 using Mars.Common.Core;
 using Mars.Components.Layers;
 using Mars.Components.Starter;
+using static Tensorflow.Binding;
+using static Tensorflow.KerasApi;
 using Mars.Core.Simulation.Entities;
 using Mars.Interfaces.Model;
 using Tensorflow;
 using Xla;
 using static Tensorflow.Binding;
+using Tensorflow.Keras.Engine;
+using Tensorflow.Keras;
 
 namespace EpidemicSpread
 {
     internal static class Program
     
     {
-        private static Tensor Deaths { get; set; }
         private static void Main()
         { 
             var calibNn = new SimpleCalibNn();
-            calibNn.Train(800);
-            
-            // var t = tf.constant(1.0f, dtype: TF_DataType.TF_FLOAT);
-            // tf.print(t);
-            // tf.print(tf.cast(t, TF_DataType.TF_BOOL));
-            
+            calibNn.Train(100);
+
             // EpidemicSpreadSimulation();
         }
         public static Tensor EpidemicSpreadSimulation()  

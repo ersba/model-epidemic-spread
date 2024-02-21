@@ -32,19 +32,16 @@ namespace EpidemicSpread.Model
 
         public void Tick()
         {
-            tf.print(tf.shape(_learnableParams.InitialInfectionRate));
-            var probability = tf.expand_dims(_learnableParams.InitialInfectionRate / _learnableParams.InitialInfectionRate * 10, axis: 0);
-            probability = tf.expand_dims(probability, axis: 1);
-            tf.print(probability);
-            var p = tf.concat(new [] { probability, 1 - probability }, axis: 1);
-            tf.print(p);
-            var mortality = tf.cast(GumbelSoftmax.Execute(p)[Slice.All, 0], dtype: TF_DataType.TF_BOOL);
+            // var probability = tf.expand_dims(_learnableParams.InitialInfectionRate / _learnableParams.InitialInfectionRate * 10, axis: 0);
+            // probability = tf.expand_dims(probability, axis: 1);
+            // var p = tf.concat(new [] { probability, 1 - probability }, axis: 1);
+            // var mortality = tf.cast(GumbelSoftmax.Execute(p)[Slice.All, 0], dtype: TF_DataType.TF_BOOL);
+            //
+            // var equalStagesMortality = tf.equal(_learnableParams.InitialInfectionRate, tf.constant(_learnableParams.InitialInfectionRate, _learnableParams.InitialInfectionRate.dtype));
+            // var castEqualStagesMortality = tf.cast(equalStagesMortality, TF_DataType.TF_FLOAT);
+            // var deaths = tf.reduce_sum(castEqualStagesMortality);
             
-            var equalStagesMortality = tf.equal(_learnableParams.InitialInfectionRate, tf.constant(_learnableParams.InitialInfectionRate, _learnableParams.InitialInfectionRate.dtype));
-            var castEqualStagesMortality = tf.cast(equalStagesMortality, TF_DataType.TF_FLOAT);
-            var deaths = tf.reduce_sum(castEqualStagesMortality);
-            
-            Deaths = deaths + _learnableParams.InitialInfectionRate;
+            Deaths += _learnableParams.InitialInfectionRate * 150;
             // Deaths += tf.constant(_learnableParams.InitialInfectionRate * 10 + mortality) + tf.cast(tf.equal(_learnableParams.InitialInfectionRate, tf.constant(_learnableParams.InitialInfectionRate, _learnableParams.InitialInfectionRate.dtype)), TF_DataType.TF_FLOAT);
         }
 
