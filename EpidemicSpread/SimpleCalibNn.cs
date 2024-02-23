@@ -15,6 +15,7 @@ using static Tensorflow.KerasApi;
 using Tensorflow.Keras.Engine;
 using Tensorflow.Keras.Losses;
 using Tensorflow.Keras.Metrics;
+using Tensorflow.Keras.Optimizers;
 using Tensorflow.Operations.Activation;
 
 namespace EpidemicSpread
@@ -49,6 +50,32 @@ namespace EpidemicSpread
              _model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
             _model.save(_modelPath, save_format:"tf");
              // _model.save_weights(weightsPath);
+        }
+
+        public void CustomTrain(int epochs = 10)
+        {
+            var optimizer = new Adam();
+            for (int epoch = 0; epoch < epochs; epoch++)
+            {
+                using (var tape = tf.GradientTape())
+                {
+                    // Berechnen Sie die Vorhersagen
+                    var predictions = ((Tensor)_model.predict(_features))[0, 0];
+
+                    // Berechnen Sie den Verlust mit Ihrer benutzerdefinierten Funktion
+                    var loss = CustomLoss(_labels, predictions) + tf.stop_gradient(predictions);
+
+                    var gradients = tape.gradient(loss, _model.TrainableVariables);
+                    optimizer.apply_gradients(zip(gradients, _model.TrainableVariables));
+                    
+                    Console.WriteLine($"Epoche {epoch + 1}, Verlust: {loss.numpy()}, Vorhersage {predictions}");
+                }
+            }
+        }
+
+        private Tensor CustomLoss(Tensor target, Tensor prediction)
+        {
+            return tf.reduce_mean(tf.square(target - prediction));
         }
         private void LoadData()
         {
@@ -91,7 +118,7 @@ namespace EpidemicSpread
                 _model.add(keras.layers.LeakyReLU());
                 _model.add(keras.layers.Dense(64));
                 _model.add(keras.layers.Dense(64));
-                _model.add(keras.layers.Dense(5, activation: "sigmoid"));
+                _model.add(keras.layers.Dense(5, activation: "relu"));
                 
                 // var inputs = keras.Input(shape: new Shape(1));
                 // var x = new Dense(new DenseArgs
@@ -111,6 +138,8 @@ namespace EpidemicSpread
     {
         public Tensor Call(Tensor yTrue, Tensor yPred, Tensor sampleWeight = null)
         {
+            
+            
             var lowerBounds = tf.constant(new float[] {1.0f, 0.001f, 0.01f, 2.0f, 4.0f});
             var upperBounds = tf.constant(new float[] {9.0f, 0.9f, 0.9f, 6.0f, 7.0f});
             var boundedPred = lowerBounds + (upperBounds - lowerBounds) * yPred;
@@ -123,12 +152,12 @@ namespace EpidemicSpread
             // var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
             // tf.print(hardSample);
             // tf.print(learnableParams.InitialInfectionRate);
-            // learnableParams.MortalityRate = boundedPred[0, 2];
+            learnableParams.MortalityRate = boundedPred[0, 2];
             // learnableParams.InitialInfectionRate = boundedPred[0, 1];
-            learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
-            tf.print(learnableParams.InfectedToRecoveredTime);
-            var predictedDeaths = Program.EpidemicSpreadSimulation();
-            // var predictedDeaths = tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
+            // learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
+            // tf.print(learnableParams.InfectedToRecoveredTime);
+            // var predictedDeaths = Program.EpidemicSpreadSimulation();
+            var predictedDeaths = tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
             
             
             
