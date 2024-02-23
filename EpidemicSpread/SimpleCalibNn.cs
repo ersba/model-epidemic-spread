@@ -63,8 +63,11 @@ namespace EpidemicSpread
                     var predictions = ((Tensor)_model.predict(_features))[0, 0];
 
                     // Berechnen Sie den Verlust mit Ihrer benutzerdefinierten Funktion
-                    var loss = CustomLoss(_labels, predictions) + tf.stop_gradient(predictions);
+                    // var loss = CustomLoss(_labels, predictions) + tf.stop_gradient(predictions);
+                    // var loss = CustomLoss(_labels, predictions) + predictions;
 
+                    var loss = CustomLoss(_labels, predictions);
+                    
                     var gradients = tape.gradient(loss, _model.TrainableVariables);
                     optimizer.apply_gradients(zip(gradients, _model.TrainableVariables));
                     
@@ -75,7 +78,15 @@ namespace EpidemicSpread
 
         private Tensor CustomLoss(Tensor target, Tensor prediction)
         {
-            return tf.reduce_mean(tf.square(target - prediction));
+            tf.print(prediction);
+            var ones = tf.ones(new Shape(1000, 1));
+            Tensor predColumn = ones * prediction;
+            Tensor oneMinusPredColumn = ones * (1 - prediction);
+            Tensor pTiled = tf.concat(new [] {predColumn, oneMinusPredColumn}, axis: 1);
+            tf.print(tf.shape(pTiled));
+            var infected = tf.reduce_sum(tf.cast(GumbelSoftmax.Execute(pTiled)[Slice.All, 0], dtype: TF_DataType.TF_FLOAT));
+            tf.print(infected);
+            return tf.reduce_mean(tf.square(target - infected));
         }
         private void LoadData()
         {
@@ -118,7 +129,7 @@ namespace EpidemicSpread
                 _model.add(keras.layers.LeakyReLU());
                 _model.add(keras.layers.Dense(64));
                 _model.add(keras.layers.Dense(64));
-                _model.add(keras.layers.Dense(5, activation: "relu"));
+                _model.add(keras.layers.Dense(5, activation: "sigmoid"));
                 
                 // var inputs = keras.Input(shape: new Shape(1));
                 // var x = new Dense(new DenseArgs
