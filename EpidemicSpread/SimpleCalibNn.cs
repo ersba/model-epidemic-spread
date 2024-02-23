@@ -123,12 +123,12 @@ namespace EpidemicSpread
             // var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
             // tf.print(hardSample);
             // tf.print(learnableParams.InitialInfectionRate);
-            learnableParams.MortalityRate = boundedPred[0, 2];
+            // learnableParams.MortalityRate = boundedPred[0, 2];
             // learnableParams.InitialInfectionRate = boundedPred[0, 1];
-            // learnableParams.InfectedToRecoveredTime = tf.cast(yPred[0, 0], TF_DataType.DtInt32Ref);
-            // var predictedDeaths = Program.EpidemicSpreadSimulation();
-            var predictedDeaths =
-                tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
+            learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
+            tf.print(learnableParams.InfectedToRecoveredTime);
+            var predictedDeaths = Program.EpidemicSpreadSimulation();
+            // var predictedDeaths = tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
             
             
             
