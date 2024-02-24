@@ -169,8 +169,11 @@ namespace EpidemicSpread.Model
         
         private void InitStages()
         {
-            var probabilityInfected = _learnableParams.InitialInfectionRate * tf.ones(new Shape(Params.AgentCount, 1));
-            var p = tf.concat(new [] { probabilityInfected, 1 - probabilityInfected }, axis: 1);
+            var ones = tf.ones(new Shape(Params.AgentCount, 1));
+            Tensor predColumn = ones * _learnableParams.InitialInfectionRate;
+            Tensor oneMinusPredColumn = ones * (1 - _learnableParams.InitialInfectionRate);
+            // var probabilityInfected = _learnableParams.InitialInfectionRate * tf.ones(new Shape(Params.AgentCount, 1));
+            var p = tf.concat(new [] { predColumn, oneMinusPredColumn }, axis: 1);
             Stages = tf.expand_dims(tf.cast(GumbelSoftmax.Execute(p)[Slice.All,0], dtype: TF_DataType.TF_FLOAT), axis: 1) * 2;
         }
 
