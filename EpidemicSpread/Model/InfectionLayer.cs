@@ -85,8 +85,15 @@ namespace EpidemicSpread.Model
             // Computation of Gradient
             // var recoveredAndDead= Stages * tf.logical_and(tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)),
             //     tf.less_equal(_nextStageTimes, (float) Context.CurrentTick)) / (float) Stage.Infected;
+            
             var recoveredAndDead= Stages * tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)) *
                 tf.less_equal(_nextStageTimes, (float) Context.CurrentTick) / (float)Stage.Infected;
+
+            // var recoveredAndDead = tf.constant(0);
+            // if (Context.CurrentTick == Params.Steps)
+            // {
+            //     recoveredAndDead = Stages * tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT));
+            // }
             
             Deaths += tf.reduce_sum(recoveredAndDead) * _learnableParams.MortalityRate;
             // var nodeFeatures =
@@ -161,9 +168,9 @@ namespace EpidemicSpread.Model
                 tf.cast(tf.equal(Stages, tf.constant((float)Stage.Mortality)), TF_DataType.TF_FLOAT) *
                 (float)Stage.Mortality +
                 tf.cast(tf.equal(Stages, tf.constant((float)Stage.Exposed)), TF_DataType.TF_FLOAT) *
-                transitionToInfected +
+                transitionToInfected * Stages / (float)Stage.Exposed +
                 tf.cast(tf.equal(Stages, tf.constant((float)Stage.Infected)), TF_DataType.TF_FLOAT) *
-                transitionToMortalityOrRecovered;
+                transitionToMortalityOrRecovered * Stages / (float)Stage.Infected;
 
             var nextStages = exposedToday * (float)Stage.Exposed + stageProgression;
             return nextStages;
