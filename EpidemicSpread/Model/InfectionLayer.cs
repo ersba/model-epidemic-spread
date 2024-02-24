@@ -83,10 +83,12 @@ namespace EpidemicSpread.Model
         public void Tick()
         {
             // Computation of Gradient
-            var recoveredAndDead= Stages * tf.logical_and(tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)),
-                tf.less_equal(_nextStageTimes, (float) Context.CurrentTick)) / (float) Stage.Infected;
+            // var recoveredAndDead= Stages * tf.logical_and(tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)),
+            //     tf.less_equal(_nextStageTimes, (float) Context.CurrentTick)) / (float) Stage.Infected;
+            var recoveredAndDead= Stages * tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)) *
+                tf.less_equal(_nextStageTimes, (float) Context.CurrentTick) / (float)Stage.Infected;
             
-            Deaths += tf.reduce_sum(recoveredAndDead) * (_learnableParams.MortalityRate);
+            Deaths += tf.reduce_sum(recoveredAndDead) * _learnableParams.MortalityRate;
             // var nodeFeatures =
             //     tf.concat(
             //         new[] { AgeGroups, tf.stop_gradient(Stages), tf.cast(_infectedIndex, TF_DataType.TF_FLOAT), _infectedTime, MeanInteractions },

@@ -84,16 +84,17 @@ namespace EpidemicSpread
             var lowerBounds = tf.constant(new float[] {1.0f, 0.001f, 0.01f, 2.0f, 4.0f});
             var upperBounds = tf.constant(new float[] {9.0f, 0.9f, 0.9f, 6.0f, 7.0f});
             var boundedPred = lowerBounds + (upperBounds - lowerBounds) * predictions;
-            
+
             LearnableParams learnableParams = LearnableParams.Instance;
             
             Console.Write("Params:");
-            tf.print(boundedPred);
+            tf.print(predictions);
             // var softSample = tf.constant(boundedPred.numpy());
             // var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
-            learnableParams.MortalityRate = predictions[0, 2];
+            // learnableParams.MortalityRate = predictions[0, 2];
             learnableParams.InitialInfectionRate = predictions[0, 1];
-            // learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
+            // learnableParams.InfectedToRecoveredTime = tf.stop_gradient(tf.cast(tf.constant(boundedPred[0,4].numpy(), 
+            //     TF_DataType.TF_INT32), TF_DataType.TF_FLOAT) - boundedPred[0,4]) + boundedPred[0,4];
             // tf.print(learnableParams.InfectedToRecoveredTime);
             var predictedDeaths = Program.EpidemicSpreadSimulation();
 
