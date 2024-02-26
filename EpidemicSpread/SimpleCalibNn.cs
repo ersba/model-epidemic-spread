@@ -1,22 +1,13 @@
 using System;
 using System.IO;
 using System.Linq;
-using EpidemicSpread.Model;
-using ServiceStack;
 using Tensorflow;
-using Tensorflow.Keras;
-using Tensorflow.Keras.ArgsDefinition;
-using Tensorflow.Keras.Models;
 using Tensorflow.Keras.Engine;
-using Tensorflow.Keras.Layers;
 using Tensorflow.NumPy;
 using static Tensorflow.Binding;
 using static Tensorflow.KerasApi;
-using Tensorflow.Keras.Engine;
 using Tensorflow.Keras.Losses;
-using Tensorflow.Keras.Metrics;
 using Tensorflow.Keras.Optimizers;
-using Tensorflow.Operations.Activation;
 
 namespace EpidemicSpread
 {
@@ -53,7 +44,6 @@ namespace EpidemicSpread
                 using (var tape = tf.GradientTape())
                 {
                     var predictions = (Tensor)_model.predict(_features);
-
                     var loss = CustomLoss(_labels, predictions);
 
                     var gradients = tape.gradient(loss, _model.TrainableVariables);
