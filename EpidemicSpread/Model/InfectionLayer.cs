@@ -82,18 +82,17 @@ namespace EpidemicSpread.Model
 
         public void Tick()
         {
-            // Computation of Gradient
-            var recoveredAndDead= Stages * tf.logical_and(tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)),
-                tf.less_equal(_nextStageTimes, (float) Context.CurrentTick)) / (float) Stage.Infected;
-            
-            Deaths += tf.reduce_sum(recoveredAndDead) * (_learnableParams.MortalityRate);
-            // var nodeFeatures =
-            //     tf.concat(
-            //         new[] { AgeGroups, tf.stop_gradient(Stages), tf.cast(_infectedIndex, TF_DataType.TF_FLOAT), _infectedTime, MeanInteractions },
-            //         axis: 1);
-            // // var exposedToday = ContactEnvironment.Forward(nodeFeatures, (int)Context.CurrentTick);
+            var recoveredAndDead= Stages * tf.equal(Stages, tf.constant(Stage.Infected, TF_DataType.TF_FLOAT)) *
+                tf.less_equal(_nextStageTimes, (float) Context.CurrentTick) / (float)Stage.Infected;
+
+            Deaths += tf.reduce_sum(recoveredAndDead) * _learnableParams.MortalityRate;
+            var nodeFeatures =
+                tf.concat(
+                    new[] { AgeGroups, Stages.numpy(), tf.cast(_infectedIndex, TF_DataType.TF_FLOAT), _infectedTime, MeanInteractions },
+                    axis: 1);
+            var exposedToday = ContactEnvironment.Forward(nodeFeatures, (int)Context.CurrentTick);
             // var exposedToday = tf.ones_like(Stages, TF_DataType.TF_FLOAT);
-            var exposedToday = tf.zeros_like(Stages);
+            // var exposedToday = tf.zeros_like(Stages);
             var nextStages = UpdateStages(exposedToday);
             _nextStageTimes = UpdateNextStageTimes(exposedToday);
             Stages = nextStages;
@@ -159,9 +158,9 @@ namespace EpidemicSpread.Model
                 tf.cast(tf.equal(Stages, tf.constant((float)Stage.Mortality)), TF_DataType.TF_FLOAT) *
                 (float)Stage.Mortality +
                 tf.cast(tf.equal(Stages, tf.constant((float)Stage.Exposed)), TF_DataType.TF_FLOAT) *
-                transitionToInfected +
+                transitionToInfected * Stages / (float)Stage.Exposed +
                 tf.cast(tf.equal(Stages, tf.constant((float)Stage.Infected)), TF_DataType.TF_FLOAT) *
-                transitionToMortalityOrRecovered;
+                transitionToMortalityOrRecovered * Stages / (float)Stage.Infected;
 
             var nextStages = exposedToday * (float)Stage.Exposed + stageProgression;
             return nextStages;
@@ -169,8 +168,11 @@ namespace EpidemicSpread.Model
         
         private void InitStages()
         {
-            var probabilityInfected = _learnableParams.InitialInfectionRate * tf.ones(new Shape(Params.AgentCount, 1));
-            var p = tf.concat(new [] { probabilityInfected, 1 - probabilityInfected }, axis: 1);
+            var ones = tf.ones(new Shape(Params.AgentCount, 1));
+            Tensor predColumn = ones * _learnableParams.InitialInfectionRate;
+            Tensor oneMinusPredColumn = ones * (1 - _learnableParams.InitialInfectionRate);
+            // var probabilityInfected = _learnableParams.InitialInfectionRate * tf.ones(new Shape(Params.AgentCount, 1));
+            var p = tf.concat(new [] { predColumn, oneMinusPredColumn }, axis: 1);
             Stages = tf.expand_dims(tf.cast(GumbelSoftmax.Execute(p)[Slice.All,0], dtype: TF_DataType.TF_FLOAT), axis: 1) * 2;
         }
 

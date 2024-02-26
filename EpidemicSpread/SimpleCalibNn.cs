@@ -15,6 +15,7 @@ using static Tensorflow.KerasApi;
 using Tensorflow.Keras.Engine;
 using Tensorflow.Keras.Losses;
 using Tensorflow.Keras.Metrics;
+using Tensorflow.Keras.Optimizers;
 using Tensorflow.Operations.Activation;
 
 namespace EpidemicSpread
@@ -29,8 +30,6 @@ namespace EpidemicSpread
         
         private string _modelPath;
 
-        public Tensor Predicted;
-        
         public SimpleCalibNn()
         {
             string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
@@ -42,13 +41,65 @@ namespace EpidemicSpread
         
         public void Train(int epochs = 10)
         {
-            // string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
-            // string modelPath = Path.Combine(projectDirectory, "modelnn");
-            // string weightsPath = Path.Combine(projectDirectory, "model.h5");
-            
-             _model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
+            _model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
             _model.save(_modelPath, save_format:"tf");
-             // _model.save_weights(weightsPath);
+        }
+
+        public void CustomTrain(int epochs = 10)
+        {
+            var optimizer = new Adam();
+            for (int epoch = 0; epoch < epochs; epoch++)
+            {
+                using (var tape = tf.GradientTape())
+                {
+                    var predictions = (Tensor)_model.predict(_features);
+
+                    var loss = CustomLoss(_labels, predictions);
+
+                    var gradients = tape.gradient(loss, _model.TrainableVariables);
+                    // tf.print(gradients[5]); //prints gradients of last layer
+                    optimizer.apply_gradients(zip(gradients, _model.TrainableVariables));
+
+                    Console.WriteLine($"epoch: {epoch + 1}, loss: {loss.numpy()}");
+                }
+            }
+        }
+
+        private Tensor CustomLoss(Tensor target, Tensor predictions)
+        {
+            var lowerBounds = tf.constant(new float[] {1.0f, 0.001f, 0.01f, 2.0f, 4.0f});
+            var upperBounds = tf.constant(new float[] {9.0f, 0.9f, 0.9f, 6.0f, 7.0f});
+            var boundedPred = lowerBounds + (upperBounds - lowerBounds) * predictions;
+
+            LearnableParams learnableParams = LearnableParams.Instance;
+            
+            Console.WriteLine("---------------------------------------------------");
+            Console.Write("parameters:");
+            tf.print(predictions);
+            // learnableParams.MortalityRate = predictions[0, 2];
+            learnableParams.InitialInfectionRate = predictions[0, 1];
+            // learnableParams.InfectedToRecoveredTime = tf.stop_gradient(tf.cast(tf.constant(boundedPred[0,4].numpy(), 
+            //     TF_DataType.TF_INT32), TF_DataType.TF_FLOAT) - boundedPred[0,4]) + boundedPred[0,4];
+            // tf.print(learnableParams.InfectedToRecoveredTime);
+            var predictedDeaths = Program.EpidemicSpreadSimulation();
+            Console.Write("deaths: ");
+            tf.print(predictedDeaths);
+            var loss = tf.reduce_mean(tf.square(target - predictedDeaths));
+            
+            return loss;
+        }
+
+        private Tensor CustomLossGumbel(Tensor target, Tensor prediction)
+        {
+            tf.print(prediction);
+            var ones = tf.ones(new Shape(1000, 1));
+            Tensor predColumn = ones * prediction;
+            Tensor oneMinusPredColumn = ones * (1 - prediction);
+            Tensor pTiled = tf.concat(new [] {predColumn, oneMinusPredColumn}, axis: 1);
+            tf.print(tf.shape(pTiled));
+            var infected = tf.reduce_sum(tf.cast(GumbelSoftmax.Execute(pTiled)[Slice.All, 0], dtype: TF_DataType.TF_FLOAT));
+            tf.print(infected);
+            return tf.reduce_mean(tf.square(target - infected));
         }
         private void LoadData()
         {
@@ -85,12 +136,10 @@ namespace EpidemicSpread
             else
             {
                 _model = keras.Sequential();
-                _model.add(keras.layers.Dense(units: 32, activation: null, input_shape: new Shape(1)));
+                _model.add(keras.layers.Dense(units: 16, activation: null, input_shape: new Shape(1)));
                 _model.add(keras.layers.LeakyReLU());
-                _model.add(keras.layers.Dense(64));
+                _model.add(keras.layers.Dense(16));
                 _model.add(keras.layers.LeakyReLU());
-                _model.add(keras.layers.Dense(64));
-                _model.add(keras.layers.Dense(64));
                 _model.add(keras.layers.Dense(5, activation: "sigmoid"));
                 
                 // var inputs = keras.Input(shape: new Shape(1));
@@ -123,12 +172,12 @@ namespace EpidemicSpread
             // var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
             // tf.print(hardSample);
             // tf.print(learnableParams.InitialInfectionRate);
-            // learnableParams.MortalityRate = boundedPred[0, 2];
+            learnableParams.MortalityRate = boundedPred[0, 2];
             // learnableParams.InitialInfectionRate = boundedPred[0, 1];
-            learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
-            tf.print(learnableParams.InfectedToRecoveredTime);
-            var predictedDeaths = Program.EpidemicSpreadSimulation();
-            // var predictedDeaths = tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
+            // learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
+            // tf.print(learnableParams.InfectedToRecoveredTime);
+            // var predictedDeaths = Program.EpidemicSpreadSimulation();
+            var predictedDeaths = tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
             
             
             

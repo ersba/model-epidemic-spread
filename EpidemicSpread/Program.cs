@@ -25,7 +25,7 @@ namespace EpidemicSpread
         private static void Main()
         { 
             var calibNn = new SimpleCalibNn();
-            calibNn.Train(100);
+            calibNn.CustomTrain(100);
 
             // EpidemicSpreadSimulation();
         }
@@ -45,7 +45,6 @@ namespace EpidemicSpread
             var handle = starter.Run();
             // var deaths = ((TestLayer)handle.Model.AllActiveLayers.First()).Deaths;
             var deaths = ((InfectionLayer)handle.Model.AllActiveLayers.First()).Deaths;
-            Console.WriteLine(deaths);
             starter.Dispose();
             Console.WriteLine("Successfully executed iterations: " + handle.Iterations);
             return deaths;
