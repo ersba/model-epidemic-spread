@@ -15,13 +15,14 @@ using static Tensorflow.KerasApi;
 using Tensorflow.Keras.Engine;
 using Tensorflow.Keras.Losses;
 using Tensorflow.Keras.Metrics;
+using Tensorflow.Keras.Optimizers;
 using Tensorflow.Operations.Activation;
 
 namespace EpidemicSpread
 {
     public class SimpleCalibNn
     {
-        private Sequential _model;
+        private Sequential Model;
         
         private NDArray _features;
         
@@ -46,9 +47,86 @@ namespace EpidemicSpread
             // string modelPath = Path.Combine(projectDirectory, "modelnn");
             // string weightsPath = Path.Combine(projectDirectory, "model.h5");
             
-             _model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
-            _model.save(_modelPath, save_format:"tf");
+             Model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
+            Model.save(_modelPath, save_format:"tf");
              // _model.save_weights(weightsPath);
+        }
+
+        public void CustomTrain(int epochs = 10)
+        {
+            var optimizer = new Adam();
+            for (int epoch = 0; epoch < epochs; epoch++)
+            {
+                using (var tape = tf.GradientTape())
+                {
+                    // Berechnen Sie die Vorhersagen
+                    // var predictions = ((Tensor)_model.predict(_features))[0, 1];
+                    var predictions = (Tensor)Model.predict(_features);
+                    // Berechnen Sie den Verlust mit Ihrer benutzerdefinierten Funktion
+                    // var loss = CustomLoss(_labels, predictions) + tf.stop_gradient(predictions);
+                    // var loss = CustomLoss(_labels, predictions) + predictions;
+
+                    var loss = CustomLoss(_labels, predictions);
+
+                    var gradients = tape.gradient(loss, Model.TrainableVariables);
+                    tf.print(gradients[5]);
+                    optimizer.apply_gradients(zip(gradients, Model.TrainableVariables));
+                    
+                    // Console.WriteLine($"Epoche: {epoch + 1}, Verlust: {loss.numpy()}, Vorhersage: {predictions}, Gradient: {gradients[1]}");
+
+                    Console.WriteLine($"Epoche: {epoch + 1}, Verlust: {loss.numpy()}, Vorhersage: {predictions}");
+                }
+            }
+        }
+
+        private Tensor CustomLoss(Tensor target, Tensor predictions)
+        {
+            var lowerBounds = tf.constant(new float[] {1.0f, 0.001f, 0.01f, 2.0f, 4.0f});
+            var upperBounds = tf.constant(new float[] {9.0f, 0.9f, 0.9f, 6.0f, 7.0f});
+            var boundedPred = lowerBounds + (upperBounds - lowerBounds) * predictions;
+
+            LearnableParams learnableParams = LearnableParams.Instance;
+            
+            Console.Write("Params:");
+            tf.print(predictions);
+            // var softSample = tf.constant(boundedPred.numpy());
+            // var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
+            // learnableParams.MortalityRate = predictions[0, 2];
+            learnableParams.InitialInfectionRate = predictions[0, 1];
+            // learnableParams.InfectedToRecoveredTime = tf.stop_gradient(tf.cast(tf.constant(boundedPred[0,4].numpy(), 
+            //     TF_DataType.TF_INT32), TF_DataType.TF_FLOAT) - boundedPred[0,4]) + boundedPred[0,4];
+            // tf.print(learnableParams.InfectedToRecoveredTime);
+            var predictedDeaths = Program.EpidemicSpreadSimulation();
+
+
+
+            // var predictedDeaths = SimpleSimulation.Execute();
+            Console.Write("Deaths: ");
+            tf.print(predictedDeaths);
+            
+            // learnableParams.R0Value = tf.constant(5.18, dtype: TF_DataType.TF_FLOAT);
+            // learnableParams.InitialInfectionRate = tf.constant(0.5, dtype: TF_DataType.TF_FLOAT);
+            // learnableParams.MortalityRate = tf.constant(0.9, dtype: TF_DataType.TF_FLOAT);
+            // learnableParams.ExposedToInfectedTime = tf.constant(3, dtype: TF_DataType.TF_FLOAT);
+            // learnableParams.InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_FLOAT);
+            // tf.print(yTrue);
+            // tf.print(predictedDeaths);
+            var loss = tf.reduce_mean(tf.square(target - predictedDeaths));
+            
+            return loss;
+        }
+
+        private Tensor CustomLossGumbel(Tensor target, Tensor prediction)
+        {
+            tf.print(prediction);
+            var ones = tf.ones(new Shape(1000, 1));
+            Tensor predColumn = ones * prediction;
+            Tensor oneMinusPredColumn = ones * (1 - prediction);
+            Tensor pTiled = tf.concat(new [] {predColumn, oneMinusPredColumn}, axis: 1);
+            tf.print(tf.shape(pTiled));
+            var infected = tf.reduce_sum(tf.cast(GumbelSoftmax.Execute(pTiled)[Slice.All, 0], dtype: TF_DataType.TF_FLOAT));
+            tf.print(infected);
+            return tf.reduce_mean(tf.square(target - infected));
         }
         private void LoadData()
         {
@@ -78,20 +156,18 @@ namespace EpidemicSpread
             {
                 var model = keras.models.load_model(_modelPath);
                 // model.load_weights(weightsPath);
-                _model = (Sequential)model;
+                Model = (Sequential)model;
                 // _model.load_weights(weightsPath);
                 // _model.summary();
             }
             else
             {
-                _model = keras.Sequential();
-                _model.add(keras.layers.Dense(units: 32, activation: null, input_shape: new Shape(1)));
-                _model.add(keras.layers.LeakyReLU());
-                _model.add(keras.layers.Dense(64));
-                _model.add(keras.layers.LeakyReLU());
-                _model.add(keras.layers.Dense(64));
-                _model.add(keras.layers.Dense(64));
-                _model.add(keras.layers.Dense(5, activation: "sigmoid"));
+                Model = keras.Sequential();
+                Model.add(keras.layers.Dense(units: 16, activation: null, input_shape: new Shape(1)));
+                Model.add(keras.layers.LeakyReLU());
+                Model.add(keras.layers.Dense(16));
+                Model.add(keras.layers.LeakyReLU());
+                Model.add(keras.layers.Dense(5, activation: "sigmoid"));
                 
                 // var inputs = keras.Input(shape: new Shape(1));
                 // var x = new Dense(new DenseArgs
@@ -103,7 +179,7 @@ namespace EpidemicSpread
                 //
                 // _model = new Functional(inputs, outputs);
             }
-            _model.compile(optimizer: keras.optimizers.Adam(), loss: new CustomLoss());
+            Model.compile(optimizer: keras.optimizers.Adam(), loss: new CustomLoss());
         }
     }
     
@@ -111,6 +187,8 @@ namespace EpidemicSpread
     {
         public Tensor Call(Tensor yTrue, Tensor yPred, Tensor sampleWeight = null)
         {
+            
+            
             var lowerBounds = tf.constant(new float[] {1.0f, 0.001f, 0.01f, 2.0f, 4.0f});
             var upperBounds = tf.constant(new float[] {9.0f, 0.9f, 0.9f, 6.0f, 7.0f});
             var boundedPred = lowerBounds + (upperBounds - lowerBounds) * yPred;
@@ -123,12 +201,12 @@ namespace EpidemicSpread
             // var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
             // tf.print(hardSample);
             // tf.print(learnableParams.InitialInfectionRate);
-            // learnableParams.MortalityRate = boundedPred[0, 2];
+            learnableParams.MortalityRate = boundedPred[0, 2];
             // learnableParams.InitialInfectionRate = boundedPred[0, 1];
-            learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
-            tf.print(learnableParams.InfectedToRecoveredTime);
-            var predictedDeaths = Program.EpidemicSpreadSimulation();
-            // var predictedDeaths = tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
+            // learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
+            // tf.print(learnableParams.InfectedToRecoveredTime);
+            // var predictedDeaths = Program.EpidemicSpreadSimulation();
+            var predictedDeaths = tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
             
             
             
