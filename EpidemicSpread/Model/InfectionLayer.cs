@@ -73,8 +73,8 @@ namespace EpidemicSpread.Model
             InitMeanInteractions();
             InitTimeVariables();
             // _infectedIndex = tf.expand_dims(tf.greater(tf.squeeze(Stages), tf.constant(0)), axis: 1);
-            _infectedIndex = tf.greater(Stages, tf.constant(0, TF_DataType.TF_FLOAT));
-            Deaths = tf.constant(0f, TF_DataType.TF_FLOAT);
+            _infectedIndex = tf.greater(Stages, tf.constant(0f));
+            Deaths = tf.constant(0f);
             // tf.print(_infectedIndex);
             
             return initiated;
@@ -91,13 +91,11 @@ namespace EpidemicSpread.Model
                     new[] { AgeGroups, tf.cast(Stages, TF_DataType.TF_INT32), tf.cast(_infectedIndex, TF_DataType.TF_INT32), _infectedTime, MeanInteractions },
                     axis: 1);
             var exposedToday = ContactEnvironment.Forward(nodeFeatures, (int)Context.CurrentTick);
-            // var exposedToday = tf.ones_like(Stages, TF_DataType.TF_FLOAT);
-            // var exposedToday = tf.zeros_like(Stages);
             var nextStages = UpdateStages(exposedToday);
             _nextStageTimes = UpdateNextStageTimes(exposedToday);
             Stages = nextStages;
-            // _infectedIndex = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedIndex), tf.constant(true)), _infectedIndex);
-            // _infectedTime = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedTime), tf.constant((float)Context.CurrentTick)), _infectedTime);
+            _infectedIndex = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedIndex), tf.constant(true)), _infectedIndex);
+            _infectedTime = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(tf.shape(_infectedTime), tf.constant((int)Context.CurrentTick)), _infectedTime);
             ArrayStages = tf.cast(Stages, TF_DataType.TF_INT32).numpy().ToArray<int>();
         }
 
@@ -119,7 +117,7 @@ namespace EpidemicSpread.Model
                 tf.equal(_nextStageTimes, tf.constant((int)Context.CurrentTick)));
             
             newTransitionTimes = tf.where(conditionInfectedAndTransitionTime, 
-                tf.fill(tf.shape(newTransitionTimes), tf.constant(_infinityTime, TF_DataType.TF_INT32)), newTransitionTimes);
+                tf.fill(tf.shape(newTransitionTimes), tf.constant(_infinityTime)), newTransitionTimes);
             
             var conditionExposedAndTransitionTime = tf.logical_and(tf.equal(currentStages, tf.constant((int)Stage.Exposed)), 
                 tf.equal(_nextStageTimes, tf.constant((int)Context.CurrentTick)));
@@ -136,32 +134,31 @@ namespace EpidemicSpread.Model
         private Tensor UpdateStages(Tensor exposedToday)
         {
             var currentStages = tf.cast(Stages, TF_DataType.TF_INT32);
-            var transitionToInfected = tf.cast(tf.less_equal(_nextStageTimes, (int)Context.CurrentTick), 
-                TF_DataType.TF_FLOAT) * (float)Stage.Infected + tf.cast(tf.greater(_nextStageTimes, 
-                (int)Context.CurrentTick), TF_DataType.TF_FLOAT) * (float)Stage.Exposed;
-            var transitionToMortalityOrRecovered = tf.cast(tf.less_equal(_nextStageTimes, (int)Context.CurrentTick), 
-                TF_DataType.TF_FLOAT) * (float)Stage.Recovered + tf.cast(tf.greater(_nextStageTimes, 
-                (int)Context.CurrentTick), TF_DataType.TF_FLOAT) * (float)Stage.Infected;
+            var transitionToInfected = tf.cast(tf.less_equal(_nextStageTimes, (int)Context.CurrentTick), TF_DataType.TF_INT32) 
+                * (int)Stage.Infected + tf.cast(tf.greater(_nextStageTimes, 
+                (int)Context.CurrentTick), TF_DataType.TF_INT32) * (int)Stage.Exposed;
+            var transitionToMortalityOrRecovered = tf.cast(tf.less_equal(_nextStageTimes, (int)Context.CurrentTick), TF_DataType.TF_INT32)
+                * (int)Stage.Recovered + tf.cast(tf.greater(_nextStageTimes, (int)Context.CurrentTick), TF_DataType.TF_INT32) * (int)Stage.Infected;
             var probabilityMortality = tf.cast(tf.logical_and(tf.equal(currentStages, tf.constant((int)Stage.Infected)), 
-                tf.less_equal(_nextStageTimes, (int)Context.CurrentTick)), dtype: TF_DataType.TF_FLOAT) * (_learnableParams.MortalityRate);
+                tf.less_equal(_nextStageTimes, (int)Context.CurrentTick)), TF_DataType.TF_INT32) * (_learnableParams.MortalityRate);
             // tf.print(probabilityMortality);
             var p = tf.concat(new [] { probabilityMortality, 1 - probabilityMortality }, axis: 1);
             var mortality = tf.cast(GumbelSoftmax.Execute(p)[Slice.All, 0], dtype: TF_DataType.TF_BOOL);
             // tf.print(transitionToMortalityOrRecovered);
             transitionToMortalityOrRecovered = tf.where(mortality, tf.fill(tf.shape(transitionToMortalityOrRecovered), 
-                (float)Stage.Mortality), transitionToMortalityOrRecovered);
+                (int)Stage.Mortality), transitionToMortalityOrRecovered);
             // tf.print(transitionToMortalityOrRecovered);
             var stageProgression =
-                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Susceptible)), TF_DataType.TF_FLOAT) *
-                (float)Stage.Susceptible +
-                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Recovered)), TF_DataType.TF_FLOAT) *
-                (float)Stage.Recovered +
-                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Mortality)), TF_DataType.TF_FLOAT) *
-                (float)Stage.Mortality +
-                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Exposed)), TF_DataType.TF_FLOAT) *
-                transitionToInfected * Stages / (float)Stage.Exposed +
-                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Infected)), TF_DataType.TF_FLOAT) *
-                transitionToMortalityOrRecovered * Stages / (float)Stage.Infected;
+                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Susceptible)), TF_DataType.TF_INT32) *
+                (int)Stage.Susceptible +
+                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Recovered)), TF_DataType.TF_INT32) *
+                (int)Stage.Recovered +
+                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Mortality)), TF_DataType.TF_INT32) *
+                (int)Stage.Mortality +
+                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Exposed)), TF_DataType.TF_INT32) *
+                transitionToInfected * Stages / (int)Stage.Exposed +
+                tf.cast(tf.equal(currentStages, tf.constant((int)Stage.Infected)), TF_DataType.TF_INT32) *
+                transitionToMortalityOrRecovered * Stages / (int)Stage.Infected;
 
             var nextStages = exposedToday * (float)Stage.Exposed + stageProgression;
             return nextStages;

@@ -24,6 +24,8 @@ namespace EpidemicSpread
     {
         private static void Main()
         { 
+            Environment.SetEnvironmentVariable("TF_ENABLE_ONEDNN_OPTS", "0");
+            
             // var calibNn = new SimpleCalibNn();
             // calibNn.CustomTrain(100);
 
@@ -47,6 +49,7 @@ namespace EpidemicSpread
             var deaths = ((InfectionLayer)handle.Model.AllActiveLayers.First()).Deaths;
             starter.Dispose();
             Console.WriteLine("Successfully executed iterations: " + handle.Iterations);
+            tf.print(deaths);
             return deaths;
         }
     }

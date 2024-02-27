@@ -63,7 +63,7 @@ namespace EpidemicSpread.Model
             var firstPart = new List<int>();
             var secondPart = new List<int>();
             
-            foreach (var line in File.ReadAllLines("Resources/contact_edges.csv"))
+            foreach (var line in File.ReadAllLines("Resources/contact_edges_five_to_fifteen.csv"))
             {
                 var splitLine = line.Split(',');
                 int firstNumber = int.Parse(splitLine[0]);
@@ -102,9 +102,9 @@ namespace EpidemicSpread.Model
         private Tensor Lamda(Tensor sourceFeature, Tensor targetFeature, int currentTick)
         {
             var targetAgeGroup = tf.gather(targetFeature, tf.constant(0), axis: 1);
-            var targetSusceptibility = tf.gather(Params.Susceptibility, tf.cast(targetAgeGroup, TF_DataType.TF_INT32));
+            var targetSusceptibility = tf.gather(Params.Susceptibility, targetAgeGroup);
             var sourceStage = tf.gather(sourceFeature, tf.constant(1), axis: 1);
-            var sourceInfector = tf.gather(Params.Infector, tf.cast(sourceStage,TF_DataType.TF_INT32));
+            var sourceInfector = tf.gather(Params.Infector, sourceStage);
             var bN = Params.EdgeAttribute;
             var integrals = tf.cast(tf.zeros_like(sourceStage), TF_DataType.TF_FLOAT);
             var sourceInfectedIndex = tf.cast(tf.gather(sourceFeature, tf.constant(2), axis: 1), dtype: TF_DataType.TF_BOOL);
@@ -112,7 +112,7 @@ namespace EpidemicSpread.Model
             var sourceInfectedTime = tf.gather(sourceFeature, tf.constant(3), axis: 1);
             var tick = tf.ones_like(sourceInfectedTime) * currentTick;
             sourceInfectedTime = tf.abs(tick - sourceInfectedTime);
-            integrals = tf.where(sourceInfectedIndex, tf.gather(_lamdaGammaIntegrals, tf.cast(sourceInfectedTime, TF_DataType.TF_INT32)), integrals);
+            integrals = tf.where(sourceInfectedIndex, tf.gather(_lamdaGammaIntegrals, sourceInfectedTime), integrals);
             var meanInteractions = tf.gather(targetFeature, tf.constant(4), axis: 1);
             // tf.print(tf.shape(targetSusceptibility));
             // tf.print(tf.shape(sourceInfector));
@@ -130,7 +130,7 @@ namespace EpidemicSpread.Model
         // exposed to a possible source of infection
         private void UpdateExposedToday(Tensor potentiallyExposed, Tensor nodeFeatures)
         {
-            var susceptibleMask = tf.equal(tf.gather(nodeFeatures, tf.constant(1), axis: 1), tf.constant((int)Stage.Susceptible, TF_DataType.TF_INT32));
+            var susceptibleMask = tf.equal(tf.gather(nodeFeatures, tf.constant(1), axis: 1), tf.constant((int)Stage.Susceptible));
             // tf.print(tf.shape(susceptibleMask));
             _exposedToday = tf.cast(susceptibleMask, TF_DataType.TF_INT32) * tf.cast(potentiallyExposed, TF_DataType.TF_INT32);
         }
