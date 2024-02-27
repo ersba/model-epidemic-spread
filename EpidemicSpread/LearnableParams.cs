@@ -22,10 +22,10 @@ namespace EpidemicSpread
             // InitialInfectionRate = tf.constant(0.05, dtype: TF_DataType.TF_FLOAT);
             R0Value = tf.constant(5.18, dtype: TF_DataType.TF_FLOAT);
             // InitialInfectionRate = tf.constant(0.5, dtype: TF_DataType.TF_FLOAT);
-            InitialInfectionRate = tf.constant(0.306273907, dtype: TF_DataType.TF_FLOAT);
+            InitialInfectionRate = tf.constant(0.296427935, dtype: TF_DataType.TF_FLOAT);
             MortalityRate = tf.constant(0.7, dtype: TF_DataType.TF_FLOAT);
-            ExposedToInfectedTime = tf.constant(3, dtype: TF_DataType.TF_FLOAT);
-            InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_FLOAT);
+            ExposedToInfectedTime = tf.constant(3, dtype: TF_DataType.TF_INT32);
+            InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_INT32);
         }
         
         public static LearnableParams Instance

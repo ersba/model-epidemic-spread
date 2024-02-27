@@ -130,9 +130,9 @@ namespace EpidemicSpread.Model
         // exposed to a possible source of infection
         private void UpdateExposedToday(Tensor potentiallyExposed, Tensor nodeFeatures)
         {
-            var susceptibleMask = tf.equal(tf.gather(nodeFeatures, tf.constant(1), axis: 1), tf.constant((int)Stage.Susceptible, TF_DataType.TF_FLOAT));
+            var susceptibleMask = tf.equal(tf.gather(nodeFeatures, tf.constant(1), axis: 1), tf.constant((int)Stage.Susceptible, TF_DataType.TF_INT32));
             // tf.print(tf.shape(susceptibleMask));
-            _exposedToday = tf.cast(susceptibleMask, TF_DataType.TF_INT32) * potentiallyExposed;
+            _exposedToday = tf.cast(susceptibleMask, TF_DataType.TF_INT32) * tf.cast(potentiallyExposed, TF_DataType.TF_INT32);
         }
         private void SetLamdaGammaIntegrals(double scale, double rate, int steps)
         {

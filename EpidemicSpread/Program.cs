@@ -24,10 +24,10 @@ namespace EpidemicSpread
     {
         private static void Main()
         { 
-            var calibNn = new SimpleCalibNn();
-            calibNn.CustomTrain(100);
+            // var calibNn = new SimpleCalibNn();
+            // calibNn.CustomTrain(100);
 
-            // EpidemicSpreadSimulation();
+            EpidemicSpreadSimulation();
         }
         public static Tensor EpidemicSpreadSimulation()  
         {
