@@ -1,20 +1,10 @@
-﻿using Newtonsoft.Json;
-using Mars.Interfaces;
+﻿using Mars.Interfaces;
 using Mars.Interfaces.Environments;
-using System;
 using System.IO;
 using System.Collections.Generic;
 using static Tensorflow.Binding;
 using MathNet.Numerics.Distributions;
-using static Tensorflow.KerasApi;
-using System.Linq;
-using Mars.Components.Layers;
-using NetTopologySuite.Planargraph;
-using ServiceStack;
-using ServiceStack.Text;
 using Tensorflow;
-using Tensorflow.Keras.Utils;
-using Tensorflow.NumPy;
 
 
 namespace EpidemicSpread.Model
@@ -63,11 +53,11 @@ namespace EpidemicSpread.Model
             var firstPart = new List<int>();
             var secondPart = new List<int>();
             
-            foreach (var line in File.ReadAllLines("Resources/contact_edges_five_to_fifteen.csv"))
+            foreach (var line in File.ReadAllLines(Params.ContactEdgesPath))
             {
                 var splitLine = line.Split(',');
-                int firstNumber = int.Parse(splitLine[0]);
-                int secondNumber = int.Parse(splitLine[1]);
+                var firstNumber = int.Parse(splitLine[0]);
+                var secondNumber = int.Parse(splitLine[1]);
 
                 if (firstNumber < limit && secondNumber < limit)
                 {
@@ -108,21 +98,12 @@ namespace EpidemicSpread.Model
             var bN = Params.EdgeAttribute;
             var integrals = tf.cast(tf.zeros_like(sourceStage), TF_DataType.TF_FLOAT);
             var sourceInfectedIndex = tf.cast(tf.gather(sourceFeature, tf.constant(2), axis: 1), dtype: TF_DataType.TF_BOOL);
-            // var sourceInfectedTime = tf.gather(tf.boolean_mask(sourceFeature, sourceInfectedIndex, axis: 0), tf.constant(3), axis: 1);
             var sourceInfectedTime = tf.gather(sourceFeature, tf.constant(3), axis: 1);
             var tick = tf.ones_like(sourceInfectedTime) * currentTick;
             sourceInfectedTime = tf.abs(tick - sourceInfectedTime);
             integrals = tf.where(sourceInfectedIndex, tf.gather(_lamdaGammaIntegrals, sourceInfectedTime), integrals);
             var meanInteractions = tf.gather(targetFeature, tf.constant(4), axis: 1);
-            // tf.print(tf.shape(targetSusceptibility));
-            // tf.print(tf.shape(sourceInfector));
-            // tf.print(tf.shape(integrals));
-            // tf.print(tf.shape(meanInteractions));
-            // Console.WriteLine("---");
-            var result = LearnableParams.Instance.R0Value * targetSusceptibility * sourceInfector * bN * integrals / meanInteractions;
-            // tf.print(tf.shape(result));
-            // tf.print(tf.shape(tf.reshape(result, new Shape(-1,1))));
-            // return tf.reshape(result, new Shape(-1,1));
+            var result = Params.R0Value * targetSusceptibility * sourceInfector * bN * integrals / meanInteractions;
             return result;
         }
         
@@ -131,7 +112,6 @@ namespace EpidemicSpread.Model
         private void UpdateExposedToday(Tensor potentiallyExposed, Tensor nodeFeatures)
         {
             var susceptibleMask = tf.equal(tf.gather(nodeFeatures, tf.constant(1), axis: 1), tf.constant((int)Stage.Susceptible));
-            // tf.print(tf.shape(susceptibleMask));
             _exposedToday = tf.cast(susceptibleMask, TF_DataType.TF_INT32) * tf.cast(potentiallyExposed, TF_DataType.TF_INT32);
         }
         private void SetLamdaGammaIntegrals(double scale, double rate, int steps)

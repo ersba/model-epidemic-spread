@@ -1,21 +1,10 @@
 using System;
 using System.Linq;
 using System.IO;
-using System.Linq;
 using EpidemicSpread.Model;
-using System.Globalization;
-using Mars.Common.Core;
-using Mars.Components.Layers;
 using Mars.Components.Starter;
-using static Tensorflow.Binding;
-using static Tensorflow.KerasApi;
-using Mars.Core.Simulation.Entities;
 using Mars.Interfaces.Model;
 using Tensorflow;
-using Xla;
-using static Tensorflow.Binding;
-using Tensorflow.Keras.Engine;
-using Tensorflow.Keras;
 
 namespace EpidemicSpread
 {
@@ -23,18 +12,15 @@ namespace EpidemicSpread
     
     {
         private static void Main()
-        { 
-            Environment.SetEnvironmentVariable("TF_ENABLE_ONEDNN_OPTS", "0");
-            
-            // var calibNn = new SimpleCalibNn();
-            // calibNn.CustomTrain(100);
+        {
+            var calibNn = new SimpleCalibNn();
+            calibNn.Train(100);
 
-            EpidemicSpreadSimulation();
+            // EpidemicSpreadSimulation();
         }
         public static Tensor EpidemicSpreadSimulation()  
         {
             var description = new ModelDescription();
-            // description.AddLayer<TestLayer>();
             description.AddLayer<InfectionLayer>();
             description.AddAgent<Host, InfectionLayer>();
             
@@ -45,11 +31,9 @@ namespace EpidemicSpread
             
             var starter = SimulationStarter.Start(description, config);
             var handle = starter.Run();
-            // var deaths = ((TestLayer)handle.Model.AllActiveLayers.First()).Deaths;
             var deaths = ((InfectionLayer)handle.Model.AllActiveLayers.First()).Deaths;
             starter.Dispose();
             Console.WriteLine("Successfully executed iterations: " + handle.Iterations);
-            tf.print(deaths);
             return deaths;
         }
     }

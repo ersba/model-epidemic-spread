@@ -30,13 +30,14 @@ namespace EpidemicSpread
             
         }
         
-        public void Train(int epochs = 10)
+        //training using keras optimization
+        public void AlternativeTrain(int epochs = 10)
         {
             _model.fit(_features, _labels, batch_size: 1, epochs: epochs, verbose: 1);
             _model.save(_modelPath, save_format:"tf");
         }
 
-        public void CustomTrain(int epochs = 10)
+        public void Train(int epochs = 10)
         {
             var optimizer = new Adam();
             for (int epoch = 0; epoch < epochs; epoch++)
@@ -47,18 +48,21 @@ namespace EpidemicSpread
                     var loss = CustomLoss(_labels, predictions);
 
                     var gradients = tape.gradient(loss, _model.TrainableVariables);
-                    // tf.print(gradients[5]); //prints gradients of last layer
                     optimizer.apply_gradients(zip(gradients, _model.TrainableVariables));
-
+                    
                     Console.WriteLine($"epoch: {epoch + 1}, loss: {loss.numpy()}");
+                    Console.Write("gradients: ");
+                    tf.print(gradients[7]); //prints gradients of last(seventh) layer, useful to see whether the simulation is differentiable
+                    
                 }
             }
+            _model.save(_modelPath, save_format:"tf");
         }
 
         private Tensor CustomLoss(Tensor target, Tensor predictions)
         {
-            var lowerBounds = tf.constant(new float[] {1.0f, 0.001f, 0.01f, 2.0f, 4.0f});
-            var upperBounds = tf.constant(new float[] {9.0f, 0.9f, 0.9f, 6.0f, 7.0f});
+            var lowerBounds = tf.constant(new [] {0.001f, 0.01f});
+            var upperBounds = tf.constant(new [] {0.9f, 0.9f});
             var boundedPred = lowerBounds + (upperBounds - lowerBounds) * predictions;
 
             LearnableParams learnableParams = LearnableParams.Instance;
@@ -66,20 +70,20 @@ namespace EpidemicSpread
             Console.WriteLine("---------------------------------------------------");
             Console.Write("parameters:");
             tf.print(predictions);
-            // learnableParams.MortalityRate = predictions[0, 2];
-            learnableParams.InitialInfectionRate = predictions[0, 1];
-            // learnableParams.InfectedToRecoveredTime = tf.stop_gradient(tf.cast(tf.constant(boundedPred[0,4].numpy(), 
-            //     TF_DataType.TF_INT32), TF_DataType.TF_FLOAT) - boundedPred[0,4]) + boundedPred[0,4];
-            // tf.print(learnableParams.InfectedToRecoveredTime);
+            learnableParams.InitialInfectionRate = boundedPred[0, 0];
+            learnableParams.MortalityRate = boundedPred[0, 1];
             var predictedDeaths = Program.EpidemicSpreadSimulation();
+            
             Console.Write("deaths: ");
             tf.print(predictedDeaths);
+            
             var loss = tf.reduce_mean(tf.square(target - predictedDeaths));
             
             return loss;
         }
 
-        private Tensor CustomLossGumbel(Tensor target, Tensor prediction)
+        //
+        private Tensor LossThroughGumbel(Tensor target, Tensor prediction)
         {
             tf.print(prediction);
             var ones = tf.ones(new Shape(1000, 1));
@@ -105,47 +109,27 @@ namespace EpidemicSpread
         
         private void InitModel()
         {
-            string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
-            string weightsPath = Path.Combine(projectDirectory, "model.h5");
-            
-            
-            // string modelPath = "model";
-            // string weightsPath = "model.h5";
-            // Console.WriteLine(Directory.GetCurrentDirectory());
-            // var model = keras.models.load_model(modelPath);
-            Console.WriteLine(_modelPath);
-            Console.WriteLine(Directory.Exists(_modelPath));
             if (Directory.Exists(_modelPath))
             {
                 var model = keras.models.load_model(_modelPath);
-                // model.load_weights(weightsPath);
                 _model = (Sequential)model;
-                // _model.load_weights(weightsPath);
-                // _model.summary();
             }
             else
             {
                 _model = keras.Sequential();
                 _model.add(keras.layers.Dense(units: 16, activation: null, input_shape: new Shape(1)));
                 _model.add(keras.layers.LeakyReLU());
-                _model.add(keras.layers.Dense(16));
+                _model.add(keras.layers.Dense(32));
                 _model.add(keras.layers.LeakyReLU());
-                _model.add(keras.layers.Dense(5, activation: "sigmoid"));
-                
-                // var inputs = keras.Input(shape: new Shape(1));
-                // var x = new Dense(new DenseArgs
-                // {Units = 32, Activation = keras.activations.Linear}).Apply(inputs);
-                // x = new Dense(new DenseArgs { Units = 64}).Apply(x);
-                // x = new Dense(new DenseArgs { Units = 64}).Apply(x);
-                // x = new Dense(new DenseArgs { Units = 64}).Apply(x);  // Optional: LeakyReLU hinzufügen, wenn benötigt
-                // var outputs = new Dense(new DenseArgs {Units = 5, Activation = keras.activations.Sigmoid}).Apply(x);
-                //
-                // _model = new Functional(inputs, outputs);
+                _model.add(keras.layers.Dense(32));
+                _model.add(keras.layers.Dense(2, activation: "sigmoid"));
             }
-            _model.compile(optimizer: keras.optimizers.Adam(), loss: new CustomLoss());
+            // _model.compile(optimizer: keras.optimizers.Adam(), loss: new CustomLoss());
         }
     }
     
+    // Custom loss function used to integrate the abm in the optimization process of keras.
+    // Only needed when training is done with AlternativeTrain
     class CustomLoss : ILossFunc
     {
         public Tensor Call(Tensor yTrue, Tensor yPred, Tensor sampleWeight = null)
@@ -158,35 +142,14 @@ namespace EpidemicSpread
             
             Console.Write("Params:");
             tf.print(boundedPred);
-            // var softSample = tf.constant(boundedPred.numpy());
-            // var hardSample = tf.cast(softSample,TF_DataType.TF_INT32);
-            // tf.print(hardSample);
-            // tf.print(learnableParams.InitialInfectionRate);
             learnableParams.MortalityRate = boundedPred[0, 2];
-            // learnableParams.InitialInfectionRate = boundedPred[0, 1];
-            // learnableParams.InfectedToRecoveredTime = tf.cast(tf.equal(boundedPred[0, 4], tf.reduce_max(boundedPred[0, 4], axis: 1, keepdims: true)),TF_DataType.TF_INT32);
-            // tf.print(learnableParams.InfectedToRecoveredTime);
-            // var predictedDeaths = Program.EpidemicSpreadSimulation();
-            var predictedDeaths = tf.constant(500) * learnableParams.MortalityRate + tf.stop_gradient(boundedPred[0, 2]);
-            
-            
-            
-            // var predictedDeaths = SimpleSimulation.Execute();
+            var predictedDeaths = Program.EpidemicSpreadSimulation();
             Console.Write("Deaths: ");
             tf.print(predictedDeaths);
-            
-            // learnableParams.R0Value = tf.constant(5.18, dtype: TF_DataType.TF_FLOAT);
-            // learnableParams.InitialInfectionRate = tf.constant(0.5, dtype: TF_DataType.TF_FLOAT);
-            // learnableParams.MortalityRate = tf.constant(0.9, dtype: TF_DataType.TF_FLOAT);
-            // learnableParams.ExposedToInfectedTime = tf.constant(3, dtype: TF_DataType.TF_FLOAT);
-            // learnableParams.InfectedToRecoveredTime = tf.constant(5, dtype: TF_DataType.TF_FLOAT);
-            // tf.print(yTrue);
-            // tf.print(predictedDeaths);
             var loss = tf.reduce_mean(tf.square(yTrue - predictedDeaths));
             
             return loss;
         }
-
         public string Reduction { get; }
         public string Name { get; }
     }

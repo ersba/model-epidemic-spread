@@ -1,7 +1,7 @@
 {
 	"globals":{
 		"deltaT": 1,
-		"steps": 50,
+		"steps": 10,
 		"pythonVisualization": true,
 		"console": false,
 		"output": "csv"
