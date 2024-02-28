@@ -5,6 +5,7 @@ using EpidemicSpread.Model;
 using Mars.Components.Starter;
 using Mars.Interfaces.Model;
 using Tensorflow;
+using static Tensorflow.Binding;
 
 namespace EpidemicSpread
 {
@@ -14,12 +15,23 @@ namespace EpidemicSpread
         private static void Main()
         {
             var calibNn = new SimpleCalibNn();
-            calibNn.Train(100);
+            calibNn.Train(5);
 
             // EpidemicSpreadSimulation();
         }
-        public static Tensor EpidemicSpreadSimulation()  
+        public static Tensor EpidemicSpreadSimulation(bool train = false)
         {
+            if (train == false && File.Exists(Params.OptimizedParametersPath))
+            {
+                var learnableParams = LearnableParams.Instance;
+                var lines = File.ReadAllLines(Params.OptimizedParametersPath).ToList();
+                var initialInfectionRate = tf.constant(float.Parse(lines[0].Split(',')[0]));
+                var mortalityRate = tf.constant(float.Parse(lines[0].Split(',')[1]));
+
+                learnableParams.InitialInfectionRate = initialInfectionRate;
+                learnableParams.MortalityRate = mortalityRate;
+
+            }
             var description = new ModelDescription();
             description.AddLayer<InfectionLayer>();
             description.AddAgent<Host, InfectionLayer>();

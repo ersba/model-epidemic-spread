@@ -16,6 +16,8 @@ namespace EpidemicSpread
         public static int AgentCount = 0;
 
         public static string ContactEdgesPath = "Resources/contact_edges_five_to_fifteen.csv";
+
+        public static string OptimizedParametersPath = "Resources/optimized_parameters.csv";
         
         public static Tensor EdgeAttribute = tf.constant(1f);
         

@@ -20,11 +20,13 @@ namespace EpidemicSpread
         private NDArray _labels;
         
         private string _modelPath;
+        
+        private string _projectDirectory;
 
         public SimpleCalibNn()
         {
-            string projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
-            _modelPath = Path.Combine(projectDirectory, "simple_calibnn");
+            _projectDirectory = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;
+            _modelPath = Path.Combine(_projectDirectory, "simple_calibnn");
             LoadData();
             InitModel();
             
@@ -39,13 +41,30 @@ namespace EpidemicSpread
 
         public void Train(int epochs = 10)
         {
+            var bestLoss = float.MaxValue;
+            if (File.Exists(Path.Combine(_projectDirectory, Params.OptimizedParametersPath)))
+            {
+                Console.WriteLine("EXISTS");
+                var lines = File.ReadAllLines(Params.OptimizedParametersPath).ToList();
+                bestLoss = float.Parse(lines[0].Split(',')[2]);
+            }
             var optimizer = new Adam();
+            
+            var bestEpochloss = float.MaxValue;
+            var bestBoundedPredictions = tf.constant(0f);
+            
             for (int epoch = 0; epoch < epochs; epoch++)
             {
                 using (var tape = tf.GradientTape())
                 {
                     var predictions = (Tensor)_model.predict(_features);
-                    var loss = CustomLoss(_labels, predictions);
+                    (var loss, var boundedPredictions) = CustomLoss(_labels, predictions);
+                    
+                    if (loss.numpy() < bestEpochloss)
+                    {
+                        bestEpochloss = loss.numpy();
+                        bestBoundedPredictions = boundedPredictions;
+                    }
 
                     var gradients = tape.gradient(loss, _model.TrainableVariables);
                     optimizer.apply_gradients(zip(gradients, _model.TrainableVariables));
@@ -53,13 +72,20 @@ namespace EpidemicSpread
                     Console.WriteLine($"epoch: {epoch + 1}, loss: {loss.numpy()}");
                     Console.Write("gradients: ");
                     tf.print(gradients[7]); //prints gradients of last(seventh) layer, useful to see whether the simulation is differentiable
-                    
+                }
+            }
+            if (bestEpochloss < bestLoss)
+            {
+                using (StreamWriter writer = new StreamWriter(Path.Combine(_projectDirectory, Params.OptimizedParametersPath)))
+                {
+                    Console.WriteLine(bestBoundedPredictions[0]);
+                    writer.WriteLine($"{bestBoundedPredictions[0]},{bestBoundedPredictions[1]},{bestEpochloss}");
                 }
             }
             _model.save(_modelPath, save_format:"tf");
         }
 
-        private Tensor CustomLoss(Tensor target, Tensor predictions)
+        private (Tensor, NDArray) CustomLoss(Tensor target, Tensor predictions)
         {
             var lowerBounds = tf.constant(new [] {0.001f, 0.01f});
             var upperBounds = tf.constant(new [] {0.9f, 0.9f});
@@ -72,14 +98,14 @@ namespace EpidemicSpread
             tf.print(predictions);
             learnableParams.InitialInfectionRate = boundedPred[0, 0];
             learnableParams.MortalityRate = boundedPred[0, 1];
-            var predictedDeaths = Program.EpidemicSpreadSimulation();
+            var predictedDeaths = Program.EpidemicSpreadSimulation(true);
             
             Console.Write("deaths: ");
             tf.print(predictedDeaths);
             
             var loss = tf.reduce_mean(tf.square(target - predictedDeaths));
             
-            return loss;
+            return (loss, boundedPred.numpy());
         }
 
         //
