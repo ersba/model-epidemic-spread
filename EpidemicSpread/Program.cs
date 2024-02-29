@@ -14,10 +14,10 @@ namespace EpidemicSpread
     {
         private static void Main()
         {
-            var calibNn = new SimpleCalibNn();
-            calibNn.Train(5);
+            // var calibNn = new SimpleCalibNn();
+            // calibNn.Train(5);
 
-            // EpidemicSpreadSimulation();
+            EpidemicSpreadSimulation();
         }
         public static Tensor EpidemicSpreadSimulation(bool train = false)
         {
@@ -25,12 +25,11 @@ namespace EpidemicSpread
             {
                 var learnableParams = LearnableParams.Instance;
                 var lines = File.ReadAllLines(Params.OptimizedParametersPath).ToList();
-                var initialInfectionRate = tf.constant(float.Parse(lines[0].Split(',')[0]));
-                var mortalityRate = tf.constant(float.Parse(lines[0].Split(',')[1]));
+                var initialInfectionRate = tf.constant(float.Parse(lines[1].Split(';')[0]));
+                var mortalityRate = tf.constant(float.Parse(lines[1].Split(';')[1]));
 
                 learnableParams.InitialInfectionRate = initialInfectionRate;
                 learnableParams.MortalityRate = mortalityRate;
-
             }
             var description = new ModelDescription();
             description.AddLayer<InfectionLayer>();

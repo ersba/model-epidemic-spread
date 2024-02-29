@@ -42,16 +42,16 @@ namespace EpidemicSpread
         public void Train(int epochs = 10)
         {
             var bestLoss = float.MaxValue;
+            var bestBoundedPredictions = new [] {0f, 0f};
+            
             if (File.Exists(Path.Combine(_projectDirectory, Params.OptimizedParametersPath)))
             {
-                Console.WriteLine("EXISTS");
-                var lines = File.ReadAllLines(Params.OptimizedParametersPath).ToList();
-                bestLoss = float.Parse(lines[0].Split(',')[2]);
+                var lines = File.ReadAllLines(Path.Combine(_projectDirectory, Params.OptimizedParametersPath)).ToList();
+                bestLoss = float.Parse(lines[1].Split(';')[2]);
             }
             var optimizer = new Adam();
             
             var bestEpochloss = float.MaxValue;
-            var bestBoundedPredictions = tf.constant(0f);
             
             for (int epoch = 0; epoch < epochs; epoch++)
             {
@@ -62,8 +62,8 @@ namespace EpidemicSpread
                     
                     if (loss.numpy() < bestEpochloss)
                     {
-                        bestEpochloss = loss.numpy();
-                        bestBoundedPredictions = boundedPredictions;
+                        bestEpochloss = loss.ToArray<float>()[0];
+                        bestBoundedPredictions = boundedPredictions.ToArray<float>();
                     }
 
                     var gradients = tape.gradient(loss, _model.TrainableVariables);
@@ -76,10 +76,10 @@ namespace EpidemicSpread
             }
             if (bestEpochloss < bestLoss)
             {
-                using (StreamWriter writer = new StreamWriter(Path.Combine(_projectDirectory, Params.OptimizedParametersPath)))
+                using (StreamWriter writer = new StreamWriter(Path.Combine(_projectDirectory, Params.OptimizedParametersPath), false))
                 {
-                    Console.WriteLine(bestBoundedPredictions[0]);
-                    writer.WriteLine($"{bestBoundedPredictions[0]},{bestBoundedPredictions[1]},{bestEpochloss}");
+                    writer.WriteLine("InitialInfectionRate;MortalityRate;Loss");
+                    writer.WriteLine($"{bestBoundedPredictions[0]};{bestBoundedPredictions[1]};{bestEpochloss}");
                 }
             }
             _model.save(_modelPath, save_format:"tf");
@@ -95,7 +95,7 @@ namespace EpidemicSpread
             
             Console.WriteLine("---------------------------------------------------");
             Console.Write("parameters:");
-            tf.print(predictions);
+            tf.print(boundedPred);
             learnableParams.InitialInfectionRate = boundedPred[0, 0];
             learnableParams.MortalityRate = boundedPred[0, 1];
             var predictedDeaths = Program.EpidemicSpreadSimulation(true);
