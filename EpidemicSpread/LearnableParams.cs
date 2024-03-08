@@ -1,27 +1,21 @@
 ﻿using Tensorflow;
-using Tensorflow.Keras.Utils;
 using static Tensorflow.Binding;
-using static Tensorflow.KerasApi;
-using Tensorflow.NumPy;
 
 namespace EpidemicSpread
 {
     public class LearnableParams
     {
         private static LearnableParams _instance;
-        public ResourceVariable InitialInfectionRate { get; set; }
-        public ResourceVariable R0Value { get; set; }
-        public ResourceVariable MortalityRate { get; set; }
-        public ResourceVariable ExposedToInfectedTime { get; set; }
-        public ResourceVariable InfectedToRecoveredTime { get; set; }
-        
+        public Tensor InitialInfectionRate { get; set; }
+        public Tensor MortalityRate { get; set; }
+
         private LearnableParams()
         {
-            InitialInfectionRate = tf.Variable(0.05, dtype: TF_DataType.TF_FLOAT);
-            R0Value = tf.Variable(5.18, dtype: TF_DataType.TF_FLOAT);
-            MortalityRate = tf.Variable(0.1, dtype: TF_DataType.TF_FLOAT);
-            ExposedToInfectedTime = tf.Variable(3, dtype: TF_DataType.TF_INT32);
-            InfectedToRecoveredTime = tf.Variable(5, dtype: TF_DataType.TF_INT32);
+            // InitialInfectionRate = tf.constant(0.05, dtype: TF_DataType.TF_FLOAT);
+            // InitialInfectionRate = tf.constant(0.5, dtype: TF_DataType.TF_FLOAT);
+            InitialInfectionRate = tf.constant(0.0138448849, dtype: TF_DataType.TF_FLOAT);
+            // InitialInfectionRate = tf.constant(0.99, dtype: TF_DataType.TF_FLOAT);
+            MortalityRate = tf.constant(0.7, dtype: TF_DataType.TF_FLOAT);
         }
         
         public static LearnableParams Instance

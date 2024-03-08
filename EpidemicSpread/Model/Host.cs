@@ -34,7 +34,7 @@ namespace EpidemicSpread.Model
         public void Init(InfectionLayer layer)
         {
             _infectionLayer = layer;
-            _infectionLayer.AgeGroups[Index].assign(tf.constant(MyAgeGroup)); 
+            _infectionLayer.ArrayAgeGroups[Index] = MyAgeGroup; 
         }
 
         public void Tick()
