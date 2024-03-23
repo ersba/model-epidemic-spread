@@ -62,8 +62,18 @@ namespace EpidemicSpread.Model
 
         public void Tick()
         {
+            
+        }
+
+        public void PreTick()
+        { 
+            
+        }
+
+        public void PostTick()
+        {
             var recoveredAndDead= Stages * tf.equal(tf.cast(Stages, TF_DataType.TF_INT32), 
-                    tf.constant(Stage.Infected, TF_DataType.TF_INT32)) * tf.less_equal(_nextStageTimes, 
+                tf.constant(Stage.Infected, TF_DataType.TF_INT32)) * tf.less_equal(_nextStageTimes, 
                 (int) Context.CurrentTick) / (float)Stage.Infected;
 
             Deaths += tf.reduce_sum(recoveredAndDead) * _learnableParams.MortalityRate;
@@ -85,16 +95,6 @@ namespace EpidemicSpread.Model
             _infectedTime = tf.where(tf.cast(exposedToday, TF_DataType.TF_BOOL), tf.fill(
                 tf.shape(_infectedTime), tf.constant((int)Context.CurrentTick)), _infectedTime);
             ArrayStages = tf.cast(Stages, TF_DataType.TF_INT32).numpy().ToArray<int>();
-        }
-
-        public void PreTick()
-        { 
-            
-        }
-
-        public void PostTick()
-        {
-            
         }
 
         private Tensor UpdateNextStageTimes(Tensor exposedToday)

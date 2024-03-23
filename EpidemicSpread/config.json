@@ -1,9 +1,9 @@
 {
 	"globals":{
 		"deltaT": 1,
-		"steps": 10,
+		"steps": 100,
 		"pythonVisualization": true,
-		"console": false,
+		"console": true,
 		"output": "csv"
 	},
 	"layers":[
