@@ -6,7 +6,7 @@ using Mars.Interfaces.Layers;
 using Tensorflow;
 using static Tensorflow.Binding;
 
-namespace EpidemicSpread.Model
+namespace EpidemicSpreadCombined.Model
 
 {
     public class InfectionLayer : AbstractLayer, ISteppedActiveLayer

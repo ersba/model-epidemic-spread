@@ -1,13 +1,13 @@
-﻿using Mars.Interfaces;
-using Mars.Interfaces.Environments;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Collections.Generic;
-using static Tensorflow.Binding;
+using Mars.Interfaces;
+using Mars.Interfaces.Environments;
 using MathNet.Numerics.Distributions;
 using Tensorflow;
+using static Tensorflow.Binding;
 
 
-namespace EpidemicSpread.Model
+namespace EpidemicSpreadCombined.Model
 {
     public class ContactGraphEnvironment : TensorGraphEnvironment, IEnvironment, IModelObject
     {

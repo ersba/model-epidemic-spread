@@ -1,15 +1,11 @@
-using System.Linq;
-using Mars.Common.Core.Random;
-using Mars.Components.Environments;
 using Mars.Components.Layers;
 using Mars.Core.Data;
 using Mars.Interfaces.Data;
-using Mars.Interfaces.Environments;
 using Mars.Interfaces.Layers;
 using Tensorflow;
 using static Tensorflow.Binding;
 
-namespace EpidemicSpread.Model
+namespace EpidemicSpreadCombined.Model
 {
     public class TestLayer : AbstractLayer, ISteppedActiveLayer
     {

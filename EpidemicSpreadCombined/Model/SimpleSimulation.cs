@@ -1,7 +1,7 @@
 using Tensorflow;
 using static Tensorflow.Binding;
 
-namespace EpidemicSpread.Model;
+namespace EpidemicSpreadCombined.Model;
 
 public static class SimpleSimulation
 {

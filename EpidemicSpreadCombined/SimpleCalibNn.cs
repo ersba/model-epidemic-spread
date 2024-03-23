@@ -3,13 +3,13 @@ using System.IO;
 using System.Linq;
 using Tensorflow;
 using Tensorflow.Keras.Engine;
+using Tensorflow.Keras.Losses;
+using Tensorflow.Keras.Optimizers;
 using Tensorflow.NumPy;
 using static Tensorflow.Binding;
 using static Tensorflow.KerasApi;
-using Tensorflow.Keras.Losses;
-using Tensorflow.Keras.Optimizers;
 
-namespace EpidemicSpread
+namespace EpidemicSpreadCombined
 {
     public class SimpleCalibNn
     {

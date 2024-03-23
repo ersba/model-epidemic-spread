@@ -1,21 +1,9 @@
 ﻿using System;
-using System.Linq;
-using Mars.Common;
-using Mars.Common.Core.Random;
 using Mars.Interfaces.Agents;
 using Mars.Interfaces.Annotations;
-using NumSharp;
-using Mars.Interfaces.Environments;
 using Mars.Interfaces.Layers;
-using Mars.Numerics;
-using Tensorflow;
-using Tensorflow.Keras.Utils;
-using static Tensorflow.Binding;
-using static Tensorflow.KerasApi;
-using Tensorflow.NumPy;
-using Shape = Tensorflow.Shape;
 
-namespace EpidemicSpread.Model 
+namespace EpidemicSpreadCombined.Model 
 {
     public class Host : IAgent<InfectionLayer>
     {

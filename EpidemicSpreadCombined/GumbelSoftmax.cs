@@ -1,7 +1,7 @@
 ﻿using Tensorflow;
 using static Tensorflow.Binding;
 
-namespace EpidemicSpread
+namespace EpidemicSpreadCombined
 {
     public static class GumbelSoftmax
     {

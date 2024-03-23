@@ -1,13 +1,13 @@
 using System;
-using System.Linq;
 using System.IO;
-using EpidemicSpread.Model;
+using System.Linq;
+using EpidemicSpreadCombined.Model;
 using Mars.Components.Starter;
 using Mars.Interfaces.Model;
 using Tensorflow;
 using static Tensorflow.Binding;
 
-namespace EpidemicSpread
+namespace EpidemicSpreadCombined
 {
     internal static class Program
     

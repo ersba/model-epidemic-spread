@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EpidemicSpread", "EpidemicSpread\EpidemicSpread.csproj", "{E9EB6AE7-68C6-4045-BD3C-DBC5E066B165}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EpidemicSpreadCombined", "EpidemicSpreadCombined\EpidemicSpreadCombined.csproj", "{E9EB6AE7-68C6-4045-BD3C-DBC5E066B165}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

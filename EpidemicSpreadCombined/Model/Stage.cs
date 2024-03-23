@@ -1,4 +1,4 @@
-namespace EpidemicSpread.Model
+namespace EpidemicSpreadCombined.Model
 {
     public enum Stage
     {
