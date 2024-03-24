@@ -1,7 +1,7 @@
 {
 	"globals":{
 		"deltaT": 1,
-		"steps": 100,
+		"steps": 50,
 		"pythonVisualization": true,
 		"console": true,
 		"output": "csv"
@@ -14,7 +14,7 @@
 	"agents":[
 		{
 			"name": "Host",
-			"count": 1000,
+			"count": 2000,
 			"file": "Resources/hosts_data.csv"
 		}
 	]

@@ -10,11 +10,8 @@ public abstract class TensorGraphEnvironment
     {
         // [4180] Messages
         // [1000] Nodes
-        tf.print(tf.shape(messages));
-        tf.print(tf.shape(targetIndices));
         // [4180 1000]
         var oneHotIndices = tf.one_hot(targetIndices, depth: numNodes);
-        tf.print(tf.shape(oneHotIndices));
         var expandedMessages = tf.expand_dims(messages, axis: -1);
         var weightedMessages = expandedMessages * oneHotIndices;
         
